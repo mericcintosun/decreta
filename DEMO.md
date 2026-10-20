@@ -4,7 +4,7 @@
 
 **Trigger:** the CourtListener docket gets a `date_terminated`. A Chainlink CRE workflow reads it, the DON agrees, and a signed report reaches `DecretaEscrow.onReport`.
 
-**Wow moment:** a federal docket closes and, with nobody clicking anything, the escrowed ETH moves to the plaintiff while the open-docket escrow stays locked.
+**Wow moment:** a federal docket closes and, with nobody clicking anything, the escrowed ETH moves to the plaintiff while the open-docket escrow stays locked. Step 8 shows both on one screen.
 
 **Close:** "The court decides. The money follows."
 
@@ -29,6 +29,8 @@
    Fallback: the local branch in `lib/use-escrow-live.ts` with the simulated release from step 5.
 7. Open `/escrows/2`, the escrow on the open docket 69102877 that `demo:reset` keeps locked. It stays LOCKED. Route file: `app/escrows/[id]/page.tsx`.
    Fallback: the fake adapter via `lib/adapter.ts` serves seed escrow 2, locked on the same docket.
+8. Open `/escrows/compare` (nav "Side by side", or "Compare with the open docket" on the record). The closed-docket escrow reads RELEASED, the open-docket escrow reads LOCKED, side by side. Route file: `app/escrows/compare/page.tsx`.
+   Fallback: fake adapter seed escrows 1 and 2; "Check the docket now" on `/escrows/1` then reload compare.
 
 ## Fake mode (default, `ADAPTER_MODE=fake`)
 

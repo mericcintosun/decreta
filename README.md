@@ -33,6 +33,17 @@ The CRE workflow in `cre/decreta-docket/main.ts` is the only path by which an es
 
 The same release rule lives in three places that must stay in sync: `evaluateCondition` in `lib/data.ts`, the `met` check in the workflow, and the contract.
 
+## Chainlink CRE in this build
+
+| Capability | Code file | DEMO step |
+| --- | --- | --- |
+| Cron Trigger | `cre/decreta-docket/main.ts` | 5 |
+| HTTP in node mode with CRE secret | `cre/decreta-docket/main.ts` | 5 |
+| `ConsensusAggregationByFields` median | `cre/decreta-docket/main.ts` | 5 |
+| EVM Write to `DecretaEscrow.onReport` | `cre/decreta-docket/main.ts`, `contracts/src/DecretaEscrow.sol` | 6 |
+
+Remove `main.ts` and steps 5, 6 and 8 never change state.
+
 ## Trust model and limits
 
 - The data source is CourtListener, the Free Law Project's mirror of PACER that RECAP users and bulk imports keep current. A stale docket means the escrow waits. A missing date always reads as "not yet", so it never pays early on missing data.
@@ -50,6 +61,7 @@ The same release rule lives in three places that must stay in sync: `evaluateCon
 - Chainlink CRE TypeScript SDK under Bun (`cre/decreta-docket/`), `cre workflow simulate --broadcast`
 - CourtListener REST API v4 (`/dockets/`)
 - Ethereum Sepolia (chain id 11155111)
+- Deployed contract: `<NEXT_PUBLIC_CONTRACT_ADDRESS>` on Sepolia, https://sepolia.etherscan.io/address/<address>. The app reads it from the env keys `NEXT_PUBLIC_CONTRACT_ADDRESS` (the address) and `SEPOLIA_RPC_URL` (the server-side RPC endpoint).
 
 ## Quickstart
 

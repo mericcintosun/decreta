@@ -25,3 +25,5 @@ DIFFERS_FROM: ledger lines checked: ETHOnline 2026 (marka), Event Contracts Hack
 Domain words: docket, clerk's stamp, escrow; texture: archival. A court docket is a paper record that gets stamped FILED and TERMINATED, so the fieldbook row (cream paper, ruled lines, stamps and specimen labels) and a rust ink-stamp accent read as the clerk's office rather than a crypto dashboard. Fraunces gives the legal-brief serif voice lawyers trust, and the L3 editorial column fits a jury of lawyers who read a memo top to bottom before they click anything.
 
 ## Amendments (append-only; later phases add dated lines here, never edit the block above)
+
+2026-10-20: app/opengraph-image.tsx keeps five token hexes because ImageResponse cannot read CSS variables; values equal the block above.

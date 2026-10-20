@@ -3,22 +3,51 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { adapter } from "@/lib/adapter";
 import { totals } from "@/lib/data";
-import type { ApiResult } from "@/lib/types";
+import type { ApiResult, DocketSnapshot, Escrow } from "@/lib/types";
 
-function unwrap<T>(result: ApiResult<T>): T {
-  if (!result.ok) throw new Error(result.hint);
-  return result.data;
+// The landing never throws: every read that fails drops the sentence that needed it.
+async function read<T>(call: () => Promise<ApiResult<T>>): Promise<T | null> {
+  try {
+    const result = await call();
+    return result.ok ? result.data : null;
+  } catch {
+    return null;
+  }
+}
+
+async function docketOf(escrow: Escrow | null): Promise<DocketSnapshot | null> {
+  return escrow ? read(() => adapter.getDocket(escrow.docketId)) : null;
+}
+
+function captionOutcome(escrow: Escrow): string {
+  if (escrow.status === "released") return `${escrow.amountEth} ETH moved to the plaintiff on the next check`;
+  if (escrow.status === "refunded") return `${escrow.amountEth} ETH went back to the depositor`;
+  return `${escrow.amountEth} ETH is locked until the next check`;
+}
+
+function closedClause(escrow: Escrow, docket: DocketSnapshot): string | null {
+  if (!docket.dateTerminated) return null;
+  if (escrow.status === "released") {
+    return `${docket.caseName} closed on ${docket.dateTerminated} and its escrow paid out on the next check`;
+  }
+  if (escrow.status === "locked") {
+    return `${docket.caseName} closed on ${docket.dateTerminated}, so its ${escrow.amountEth} ETH pays out on the next check`;
+  }
+  return null;
 }
 
 export default async function Home() {
-  const escrows = unwrap(await adapter.listEscrows());
-  const t = totals(escrows);
-  const docketCount = new Set(escrows.map((e) => e.docketId)).size;
-  const closed = unwrap(await adapter.getEscrow(1));
-  const open = unwrap(await adapter.getEscrow(2));
-  const [closedDocket, openDocket] = (
-    await Promise.all([adapter.getDocket(closed.docketId), adapter.getDocket(open.docketId)])
-  ).map(unwrap);
+  const [escrows, closed, open] = await Promise.all([
+    read(() => adapter.listEscrows()),
+    read(() => adapter.getEscrow(1)),
+    read(() => adapter.getEscrow(2)),
+  ]);
+  const t = escrows ? totals(escrows) : null;
+  const docketCount = escrows ? new Set(escrows.map((e) => e.docketId)).size : 0;
+  const [closedDocket, openDocket] = await Promise.all([docketOf(closed), docketOf(open)]);
+
+  const sideBySide =
+    closed && closedDocket && open && openDocket && open.status === "locked" ? closedClause(closed, closedDocket) : null;
 
   return (
     <article className="decreta-ruled">
@@ -42,11 +71,15 @@ export default async function Home() {
             className="h-auto w-full"
             unoptimized
           />
-          <figcaption className="mt-3 text-sm text-muted-foreground">
-            Escrow No. 1 in the demo set: {closedDocket.caseName}, {closedDocket.docketNumber}. The docket shows a
-            termination date of {closedDocket.dateTerminated}, and {closed.amountEth} ETH moved to the plaintiff on the
-            next check.
-          </figcaption>
+          {closed && closedDocket && (
+            <figcaption className="mt-3 text-sm text-muted-foreground">
+              Escrow No. 1 in the demo set: {closedDocket.caseName}, {closedDocket.docketNumber}.{" "}
+              {closedDocket.dateTerminated
+                ? `The docket shows a termination date of ${closedDocket.dateTerminated}, and `
+                : "The docket shows no termination date yet, and "}
+              {captionOutcome(closed)}.
+            </figcaption>
+          )}
         </figure>
 
         <section className="space-y-5 text-lg leading-relaxed">
@@ -65,15 +98,22 @@ export default async function Home() {
         </section>
 
         <section className="my-14 border-y-2 border-primary py-8">
-          <p className="text-lg leading-relaxed">
-            The demo desk holds {t.count} escrows worth {t.totalEth} Sepolia ETH across {docketCount} federal
-            dockets. {t.released} have already paid out because their dockets closed or recorded the filing they were
-            waiting for, {t.locked} are still locked, and {t.refunded} went back to the depositor after its deadline
-            passed with the case still open.
-          </p>
-          <Button asChild size="lg" className="mt-6">
-            <Link href="/escrows">Open the escrow desk</Link>
-          </Button>
+          {t && (
+            <p className="text-lg leading-relaxed">
+              The demo desk holds {t.count} escrows worth {t.totalEth} Sepolia ETH across {docketCount} federal
+              dockets. {t.released} have already paid out because their dockets closed or recorded the filing they were
+              waiting for, {t.locked} are still locked, and {t.refunded} went back to the depositor after the deadline
+              passed with the case still open.
+            </p>
+          )}
+          <div className={t ? "mt-6 flex flex-wrap gap-3" : "flex flex-wrap gap-3"}>
+            <Button asChild size="lg">
+              <Link href="/escrows">Open the escrow desk</Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="whitespace-normal text-left">
+              <Link href="/escrows/compare">See a closed and an open docket side by side</Link>
+            </Button>
+          </div>
         </section>
 
         <section id="how" className="scroll-mt-20 space-y-5 text-lg leading-relaxed">
@@ -98,11 +138,15 @@ export default async function Home() {
               same transaction. If the deadline passes first, anyone can trigger the refund.
             </li>
           </ol>
-          <p>
-            Side by side, the difference is plain: {closedDocket.caseName} closed on {closedDocket.dateTerminated} and
-            its escrow paid out the next day, while {openDocket.caseName} last saw a filing on{" "}
-            {openDocket.dateLastFiling} and its {open.amountEth} ETH is still waiting.
-          </p>
+          {sideBySide && open && openDocket && (
+            <p>
+              Side by side, the difference is plain: {sideBySide}, while {openDocket.caseName}{" "}
+              {openDocket.dateLastFiling
+                ? `last saw a filing on ${openDocket.dateLastFiling}`
+                : "has no filing date on record"}{" "}
+              and its {open.amountEth} ETH is still waiting.
+            </p>
+          )}
         </section>
 
         <section className="mt-14 space-y-4">

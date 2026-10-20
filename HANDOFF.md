@@ -2,6 +2,80 @@
 
 You are picking up a working scaffold. Read this whole file, then start on Mission task 1. Keep `npm run build` green after every change.
 
+# Phase 4: second wow, mobile shell and the judged surface (2026-10-20)
+
+## Goal
+
+Add DEMO step 8 (`/escrows/compare`), where the closed-docket escrow flips LOCKED to RELEASED within one 5 s poll while the open-docket escrow stays LOCKED. Make the live URL worth judging: a mobile nav, 44px targets, hashes that never overflow, full OG metadata, a landing page that cannot throw, and copy that matches what shipped.
+
+## Status
+
+All four slices are written. Nothing was built, run or tested; the agent had no shell. Nothing was cut.
+
+- Slice 1: the `SiteNav` "Menu" disclosure (`md:hidden`, `aria-expanded`, `aria-controls="primary-menu"`) and the desktop row `hidden md:flex`. The "Side by side" link was added. Buttons and inputs are now 44px or larger, and the brand link is `min-h-11`.
+- Slice 2: the `app/escrows/compare/{page,loading,error}.tsx` files and `components/escrow-pair.tsx` (one `useEscrowLive` per column). `STAMP_TEXT` and `STAMP_COLOR` are exported from `escrow-record.tsx`, which now has the "Compare with the open docket" link.
+- Slice 3: every `shortHex(` sits under an element with `title=` and `break-all`. The console docket `Input` is `min-w-0`.
+- Slice 4: metadata in `app/layout.tsx` (description is 149 characters), the landing guard and state-true copy, a second landing button, DEMO step 8, the README CRE table and contract line, `DELIVERY.md`, and the IDENTITY amendment.
+
+## Decisions
+
+- **Zero bounty rows.** The only `targetTracks` entry is "General (no tracks verified)" (`kind: main-placement`, `expectedValueUsd: null`, `marginalHours: 0`). No `sponsor-bounty` row exists, so 0 h went to bounty integrations. No new seat was added: one chain (Sepolia), no auth provider, no database, no model provider. CRE stays the core (`cre/decreta-docket/main.ts`).
+- **Compare route.**
+  - Default `left` is the highest id on docket 68519034. Default `right` is the lowest locked id on 69102877. `?left=`/`?right=` override both.
+  - A URL id the adapter does not know is passed to the client with `seed: null`. `useEscrowLive` then looks in localStorage, so "Compare with the open docket" also works for an escrow locked in this browser (fake mode).
+  - When `listEscrows` fails, the client shows `ErrorState` with the failure's `hint` and a `router.refresh()` retry. `ErrorState` needs an `onRetry` function, so it cannot be rendered from the server page.
+  - The page holds `CLOSED_DOCKET_ID` and `OPEN_DOCKET_ID`, which makes it a sixth docket-id sync point (add it to the CLAUDE.md list next time it is edited).
+  - The stamp gets `decreta-stamp-in` only when its status differs from the server-rendered status, so a flip animates and a first paint does not.
+- **Button sizes.**
+  - `default: min-h-11 px-4 py-2`, `sm: min-h-11 px-3 text-sm`, `lg: min-h-12 px-8`, `icon: h-11 w-11`.
+  - `sm` is now `text-sm` instead of `text-xs`, so the register filter chips and the "Try" link buttons get taller.
+  - The "Try" buttons keep `h-auto`, but `min-h-11` still applies.
+- **Mobile menu panel** is `absolute inset-x-0 top-full` against the sticky header (a positioned ancestor), solid `bg-background`, no blur.
+- **The compare link on the record** sits in the record header under the memo, not on the same line as "Back to the escrow desk". That back link lives in `app/escrows/[id]/page.tsx`, outside the component.
+- **Landing.**
+  - Every adapter call goes through `read()`, which returns `null` on an `ok: false` result or a rejected promise. If the register fails, the register sentence drops. If escrow 1 or its docket is missing, the figcaption drops. The side-by-side paragraph renders only when escrow 1's docket is terminated, escrow 1 is locked or released, and escrow 2 is locked.
+  - The caption reads "is locked until the next check" or "moved to the plaintiff on the next check" according to `closed.status`.
+- **`app/icon.svg` holds three IDENTITY hexes** (`#f5f2e6`, `#b4552d`, `#26311f`). It is a pre-existing SVG asset, so the strict reading of "hex only in globals.css and opengraph-image.tsx" is not met there. It was left as is because the spec says it stays the favicon.
+
+## Failed attempts
+
+None.
+
+## Files changed
+
+New:
+- `app/escrows/compare/page.tsx`, `app/escrows/compare/loading.tsx`, `app/escrows/compare/error.tsx`
+- `components/escrow-pair.tsx`
+- `DELIVERY.md`
+
+Edited:
+- `components/site-nav.tsx`, `components/ui/button.tsx`, `components/ui/input.tsx`
+- `components/escrow-record.tsx`, `components/escrow-console.tsx`, `components/wallet-panel.tsx`
+- `app/layout.tsx`, `app/page.tsx`
+- `.env.example`, `DEMO.md`, `README.md`, `IDENTITY.md` (one amendment line), `HANDOFF.md`, `.farm-commits.json`
+
+Untouched: `contracts/`, `cre/`, `scripts/`, `lib/**`, `app/api/**`, `app/opengraph-image.tsx`, `app/icon.svg`, `app/error.tsx`, `app/not-found.tsx`. The last two render inside the root layout, so the header and nav stay present.
+
+## Commands run
+
+None.
+
+## Open questions
+
+- **Forwarder trust gap is still open.** The MockKeystoneForwarder accepts any simulated report. The fix is the production KeystoneForwarder plus a workflow owner and id check in `onReport`, which is a `DecretaEscrow.sol` change. Asking, not doing.
+- **Confidential HTTP in `cre/decreta-docket/main.ts`** is a human task with the `cre` CLI: check the SDK surface against the CLI template, then run `cre workflow simulate`.
+- **DoraHacks detail tab.** Open https://dorahacks.io/hackathon/legal-hack-2026 in a browser, check for a Chainlink prize row and opt-in boxes, and follow `DELIVERY.md`.
+- **Deployed contract address** is not recorded in this file, so README keeps the `<NEXT_PUBLIC_CONTRACT_ADDRESS>` placeholder. Fill it after deploy.
+- **Unverified until the runner runs commands:**
+  - The TypeScript build. Likely friction: the tuple inference of `Promise.all` over `read()` in `app/page.tsx`, and `ApiFailure["error"]` imported through `@/lib/data` in `escrow-pair.tsx`.
+  - The 360, 768 and 1280 px layouts, the 5 s flip on compare in real mode, Lighthouse, and the absolute `og:image` URL.
+
+## Next best step
+
+Runner: `npm run build`, then walk DEMO steps 1 to 8 at 360 px and 1280 px. Then record the 90-second video, ending on `/escrows/compare`, and submit per `DELIVERY.md`.
+
+---
+
 # Phase 3: live demo path (2026-10-20)
 
 ## Goal
