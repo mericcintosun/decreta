@@ -73,6 +73,29 @@ Tests: `npm run test:contracts` (runs `forge test -vv` in `contracts/`, includin
 
 With `ADAPTER_MODE=real`, `NEXT_PUBLIC_CONTRACT_ADDRESS`, `SEPOLIA_RPC_URL` and `ESCROW_DEPLOY_BLOCK` set, the register and the escrow record read `DecretaEscrow` on Sepolia: status from `getEscrow`, the timeline from the `Deposited`, `Checked`, `Released` and `Refunded` logs.
 
+### Reset, deploy and demo wallet
+
+There is no database. The proof is the chain: every escrow, check and release is a `DecretaEscrow` event on Sepolia, so the server reads state and logs through `lib/escrow-chain.ts` and the browser writes through `lib/chain.ts`. Nothing else needs to persist.
+
+```bash
+npm run contracts:deploy   # forge Deploy.s.sol, needs PRIVATE_KEY and RPC_URL
+npm run contracts:smoke    # forge Smoke.s.sol, also needs DEPLOYED_CONTRACT; creates escrow 1
+npm run demo:reset         # rewrites fixtures/seed.json, then scripts/demo-reset.ts
+```
+
+How a demo cycle works:
+
+1. `demo:reset` reads `escrowCount`, locks 0.0001 ETH on the open docket 69102877 if no locked escrow sits there yet (that is escrow 2 on a fresh contract), and tops up `DEMO_WALLET_ADDRESS` to 0.05 ETH when it holds less than 0.03.
+2. It rewrites `cre/decreta-docket/config.staging.json` so CRE watches `escrowCount + 1` on docket 68519034 and the open-docket escrow, and prints that next id.
+3. The presenter locks 0.01 ETH on docket 68519034 from `/escrows`. That lock gets the printed id.
+4. `cre workflow simulate decreta-docket --target staging-settings --broadcast` releases it. The record page flips to RELEASED within one 5 s poll.
+
+The chain is never rolled back. Released escrows stay released and each cycle uses a fresh id, so old state never changes what the audience sees. Run `demo:reset` before every cycle.
+
+The demo wallet is the prefunded wallet imported into the browser (MetaMask or similar). Put its public address in `DEMO_WALLET_ADDRESS` and the plaintiff's public address in `NEXT_PUBLIC_DEMO_PLAINTIFF`.
+
+Fake mode (`ADAPTER_MODE=fake`, no contract) keeps escrows created in the browser in localStorage under `LOCAL_KEY` (`decreta:local-escrows`, in `lib/data.ts`). Clear that key in devtools to reset them.
+
 CRE workflow (needs the `cre` CLI and Bun 1.2.21+):
 
 ```bash
