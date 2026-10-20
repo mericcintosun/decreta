@@ -1,4 +1,5 @@
-import { COURT_NAMES, findDocket, type DocketSnapshot } from "@/lib/data";
+import { COURT_NAMES, findDocket } from "@/lib/data";
+import type { DocketSnapshot, DocketSource } from "@/lib/types";
 
 // CourtListener REST API v4 adapter (server side only, the token never ships
 // to the browser). Same function, two paths:
@@ -8,8 +9,6 @@ import { COURT_NAMES, findDocket, type DocketSnapshot } from "@/lib/data";
 // (date_terminated, date_last_filing) inside the DON.
 
 const API_BASE = "https://www.courtlistener.com/api/rest/v4";
-
-export type DocketSource = "courtlistener" | "seed";
 
 export type DocketLookup =
   | { ok: true; docket: DocketSnapshot; source: DocketSource }
