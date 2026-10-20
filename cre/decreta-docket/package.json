@@ -1,0 +1,15 @@
+{
+  "name": "decreta-docket-workflow",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "main.ts",
+  "scripts": {
+    "postinstall": "bunx cre-setup"
+  },
+  "dependencies": {
+    "@chainlink/cre-sdk": "^1.0.0",
+    "viem": "^2.31.0",
+    "zod": "^3.25.0"
+  }
+}

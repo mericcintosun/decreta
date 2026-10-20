@@ -1,0 +1,11 @@
+{
+  "schedule": "0 */10 * * * *",
+  "courtListenerBase": "https://www.courtlistener.com/api/rest/v4",
+  "chainSelectorName": "ethereum-testnet-sepolia",
+  "escrowAddress": "0x0000000000000000000000000000000000000000",
+  "gasLimit": "300000",
+  "watch": [
+    { "escrowId": 1, "docketId": 68519034, "condition": "terminated", "filedAfter": null },
+    { "escrowId": 2, "docketId": 69102877, "condition": "terminated", "filedAfter": null }
+  ]
+}
