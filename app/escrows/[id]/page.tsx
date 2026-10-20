@@ -1,26 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { EscrowRecord } from "@/components/escrow-record";
-import { getDocket } from "@/lib/courtlistener";
-import { findDocket, findEscrow } from "@/lib/data";
+import { adapter } from "@/lib/adapter";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `Escrow No. ${id} · Decreta` };
+  return { title: `Escrow No. ${id}` };
 }
 
 export default async function EscrowPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const escrowId = Number(id);
-  const seed = Number.isSafeInteger(escrowId) ? findEscrow(escrowId) ?? null : null;
+  const lookup = Number.isSafeInteger(escrowId) && escrowId > 0 ? await adapter.getEscrow(escrowId) : null;
+  const seed = lookup?.ok ? lookup.data : null;
 
-  // Seed escrows get a server-side docket read (live when the token is set).
+  // Register escrows get a server-side docket read through the adapter.
   // Escrows created in this browser carry their own snapshot; the client handles them.
-  let docket = seed ? findDocket(seed.docketId) ?? null : null;
-  if (seed) {
-    const lookup = await getDocket(seed.docketId);
-    if (lookup.ok) docket = lookup.docket;
-  }
+  const docketResult = seed ? await adapter.getDocket(seed.docketId) : null;
+  const docket = docketResult?.ok ? docketResult.data : null;
 
   return (
     <div className="decreta-ruled">

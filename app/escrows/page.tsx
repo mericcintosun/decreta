@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import { EscrowConsole } from "@/components/escrow-console";
+import { adapter, adapterMode } from "@/lib/adapter";
 import { hasLiveCourtListener } from "@/lib/courtlistener";
-import { dockets, escrows, totals } from "@/lib/data";
+import { totals, type DocketSnapshot } from "@/lib/data";
 
 export const metadata: Metadata = {
-  title: "Escrow desk · Decreta",
+  title: "Escrow desk",
   description: "Open an escrow against a federal docket and follow every escrow on the demo register.",
 };
 
-export default function EscrowDeskPage() {
+export default async function EscrowDeskPage() {
+  const list = await adapter.listEscrows();
+  const escrows = list.ok ? list.data : [];
+
+  // One docket read per distinct docket on the register, through the same seam.
+  const docketIds = [...new Set(escrows.map((e) => e.docketId))];
+  const lookups = await Promise.all(docketIds.map((id) => adapter.getDocket(id)));
+  const dockets: DocketSnapshot[] = lookups.flatMap((r) => (r.ok ? [r.data] : []));
+
   const t = totals(escrows);
 
   return (
@@ -22,8 +31,17 @@ export default function EscrowDeskPage() {
             holds {t.count} escrows: {t.releasedEth} ETH already paid out on docket events, {t.lockedEth} ETH still
             waiting on the court.
           </p>
+          {!list.ok && (
+            <p role="alert" className="border-l-4 border-bad bg-secondary p-3 text-sm">
+              The register could not be read: {list.error.message}
+            </p>
+          )}
         </header>
-        <EscrowConsole seedEscrows={escrows} seedDockets={dockets} liveDockets={hasLiveCourtListener()} />
+        <EscrowConsole
+          seedEscrows={escrows}
+          seedDockets={dockets}
+          liveDockets={adapterMode === "real" && hasLiveCourtListener()}
+        />
       </div>
     </div>
   );

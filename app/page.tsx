@@ -1,14 +1,24 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { dockets, escrows, findDocket, totals } from "@/lib/data";
+import { adapter } from "@/lib/adapter";
+import { totals } from "@/lib/data";
+import type { ApiResult } from "@/lib/types";
 
-export default function Home() {
+function unwrap<T>(result: ApiResult<T>): T {
+  if (!result.ok) throw new Error(result.error.message);
+  return result.data;
+}
+
+export default async function Home() {
+  const escrows = unwrap(await adapter.listEscrows());
   const t = totals(escrows);
-  const closed = escrows.find((e) => e.id === 1)!;
-  const closedDocket = findDocket(closed.docketId)!;
-  const open = escrows.find((e) => e.id === 2)!;
-  const openDocket = findDocket(open.docketId)!;
+  const docketCount = new Set(escrows.map((e) => e.docketId)).size;
+  const closed = unwrap(await adapter.getEscrow(1));
+  const open = unwrap(await adapter.getEscrow(2));
+  const [closedDocket, openDocket] = (
+    await Promise.all([adapter.getDocket(closed.docketId), adapter.getDocket(open.docketId)])
+  ).map(unwrap);
 
   return (
     <article className="decreta-ruled">
@@ -56,7 +66,7 @@ export default function Home() {
 
         <section className="my-14 border-y-2 border-primary py-8">
           <p className="text-lg leading-relaxed">
-            The demo desk holds {t.count} escrows worth {t.totalEth} Sepolia ETH across {dockets.length} federal
+            The demo desk holds {t.count} escrows worth {t.totalEth} Sepolia ETH across {docketCount} federal
             dockets. {t.released} have already paid out because their dockets closed or recorded the filing they were
             waiting for, {t.locked} are still locked, and {t.refunded} went back to the depositor after its deadline
             passed with the case still open.

@@ -18,7 +18,9 @@ import {
   parseDocketInput,
   saveLocalEscrow,
   shortHex,
+  type ApiResult,
   type ConditionKind,
+  type DataSource,
   type DocketSnapshot,
   type Escrow,
   type EscrowStatus,
@@ -29,7 +31,7 @@ import { cn } from "@/lib/utils";
 type Preview =
   | { state: "idle" }
   | { state: "loading"; id: number }
-  | { state: "ready"; docket: DocketSnapshot; source: "courtlistener" | "seed" }
+  | { state: "ready"; docket: DocketSnapshot; source: DataSource }
   | { state: "error"; message: string };
 
 type Filter = "all" | EscrowStatus;
@@ -83,12 +85,12 @@ export function EscrowConsole({
     setPreview({ state: "loading", id });
     try {
       const res = await fetch(`/api/docket/${id}`);
-      const body = (await res.json()) as { docket?: DocketSnapshot; source?: "courtlistener" | "seed"; error?: string };
-      if (!res.ok || !body.docket) {
-        setPreview({ state: "error", message: body.error ?? `Lookup failed with status ${res.status}.` });
+      const body = (await res.json()) as ApiResult<DocketSnapshot>;
+      if (!body.ok) {
+        setPreview({ state: "error", message: body.error.message || `Lookup failed with status ${res.status}.` });
         return;
       }
-      setPreview({ state: "ready", docket: body.docket, source: body.source ?? "seed" });
+      setPreview({ state: "ready", docket: body.data, source: body.source });
     } catch {
       setPreview({ state: "error", message: "Network error while reaching the docket service." });
     }
@@ -161,7 +163,7 @@ export function EscrowConsole({
           <p className="max-w-prose text-muted-foreground">
             {liveDockets
               ? "Docket lookups go to CourtListener live."
-              : "No CourtListener token is set, so lookups use the ten demo dockets."}{" "}
+              : "Demo mode: lookups use the ten demo dockets."}{" "}
             {isLiveChain ? "Locking sends a real Sepolia transaction from your wallet." : "No contract address is set, so locking is simulated in this browser."}
           </p>
         </div>
@@ -196,7 +198,7 @@ export function EscrowConsole({
                 <div className="mt-2 flex flex-wrap items-center gap-x-1 text-sm text-muted-foreground">
                   Try
                   {[
-                    { id: 73388204, hint: "closed" },
+                    { id: 68519034, hint: "closed" },
                     { id: 69102877, hint: "open" },
                   ].map((s) => (
                     <Button
@@ -378,7 +380,14 @@ export function EscrowConsole({
         {visible.length === 0 ? (
           <Card className="text-center">
             <CardContent className="space-y-3 pt-6">
-              <Image src="/illustrations/docket-sheet.svg" alt="" width={320} height={150} className="mx-auto opacity-70" unoptimized />
+              <Image
+                src="/illustrations/docket-sheet.svg"
+                alt="A ruled docket sheet with a rust TERMINATED stamp"
+                width={320}
+                height={150}
+                className="mx-auto opacity-70"
+                unoptimized
+              />
               <p className="font-display text-lg">No escrows with this status.</p>
               <Button variant="outline" size="sm" onClick={() => setFilter("all")}>
                 Show all

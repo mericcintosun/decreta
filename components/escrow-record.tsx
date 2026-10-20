@@ -15,6 +15,7 @@ import {
   mockTxHash,
   saveLocalEscrow,
   shortHex,
+  type ApiResult,
   type DocketSnapshot,
   type Escrow,
   type EscrowEvent,
@@ -103,9 +104,9 @@ export function EscrowRecord({
     setCheckError(null);
     try {
       const res = await fetch(`/api/docket/${escrow.docketId}`);
-      const body = (await res.json()) as { docket?: DocketSnapshot; error?: string };
-      if (!res.ok || !body.docket) throw new Error(body.error ?? `Docket read failed with status ${res.status}.`);
-      const fresh = body.docket;
+      const body = (await res.json()) as ApiResult<DocketSnapshot>;
+      if (!body.ok) throw new Error(body.error.message || `Docket read failed with status ${res.status}.`);
+      const fresh = body.data;
       setDocket(fresh);
 
       const verdict = evaluateCondition(escrow, fresh);
@@ -150,7 +151,14 @@ export function EscrowRecord({
     return (
       <Card className="mt-10 text-center">
         <CardContent className="space-y-4 pt-6">
-          <Image src="/illustrations/docket-sheet.svg" alt="" width={320} height={150} className="mx-auto opacity-70" unoptimized />
+          <Image
+            src="/illustrations/docket-sheet.svg"
+            alt="A ruled docket sheet with a rust TERMINATED stamp"
+            width={320}
+            height={150}
+            className="mx-auto opacity-70"
+            unoptimized
+          />
           <h1 className="text-2xl font-semibold">No escrow No. {escrowId} on this desk</h1>
           <p className="text-muted-foreground">
             It is not in the demo register, and this browser has no locally created escrow with that number.
