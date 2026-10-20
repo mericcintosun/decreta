@@ -2,8 +2,13 @@
 
 Decreta is settlement escrow bound to a US federal court docket: the parties lock funds on-chain against a CourtListener docket, a Chainlink CRE workflow reads that docket on a schedule, and the money goes to the payee by itself once the court closes the case or files the agreed order, with a refund to the depositor if the deadline passes first.
 
-> Live demo: https://decreta.vercel.app
-> Video: <ADD_VIDEO_URL>
+| Address | Link |
+| --- | --- |
+| Live demo | https://decreta.vercel.app |
+| Video | <ADD_VIDEO_URL> |
+| Contract (Sepolia) | `<NEXT_PUBLIC_CONTRACT_ADDRESS>`, https://sepolia.etherscan.io/address/<address> (placeholder until the Phase 5 redeploy) |
+| Source | https://github.com/mericcintosun/decreta |
+| Hackathon | BLI Legal Tech Hackathon 2, https://dorahacks.io/hackathon/legal-hack-2026 (track: General, no tracks verified) |
 
 ## The problem
 

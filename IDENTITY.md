@@ -27,3 +27,4 @@ Domain words: docket, clerk's stamp, escrow; texture: archival. A court docket i
 ## Amendments (append-only; later phases add dated lines here, never edit the block above)
 
 2026-10-20: app/opengraph-image.tsx keeps five token hexes because ImageResponse cannot read CSS variables; values equal the block above.
+2026-10-20: landing ruled paper confined to the figure frame; a rust docket margin line carries the fieldbook texture beside the L3 column.
