@@ -87,7 +87,7 @@ h2 {
   text-transform: uppercase;
 }
 
-/* Ruled paper behind the article column, like a docket sheet. */
+/* Ruled paper, like a docket sheet. Only behind frames and empty states, never under running text on the landing. */
 .decreta-ruled {
   background-image: repeating-linear-gradient(
     to bottom,
@@ -96,6 +96,13 @@ h2 {
     color-mix(in oklab, var(--rule) 45%, transparent) 31px,
     color-mix(in oklab, var(--rule) 45%, transparent) 32px
   );
+}
+
+/* Docket margin: the red rule down the left of a docket sheet, beside the landing column at lg. */
+@media (min-width: 64rem) {
+  .decreta-margin {
+    border-left: 1px solid color-mix(in oklab, var(--rust) 55%, transparent);
+  }
 }
 
 /* M1 RISE, the one motion signature of this project. */
