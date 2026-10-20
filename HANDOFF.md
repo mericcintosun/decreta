@@ -2,6 +2,62 @@
 
 You are picking up a working scaffold. Read this whole file, then start on Mission task 1. Keep `npm run build` green after every change.
 
+# Phase 1: walking skeleton (2026-10-20)
+
+## Goal
+
+Every step of the 90-second script runs end to end on fake data (`ADAPTER_MODE=fake`, the default), and every page and API route reads through one adapter that returns one `ApiResult<T>` shape, so Phase 2 can switch to real data without editing pages.
+
+## Status
+
+All five slices are written. Nothing has been built or run: the agent had no shell. The runner still has to run `npm install`, `npm run build`, `npm run seed` (twice, then diff) and `cd contracts && forge build && forge test`.
+
+- Slice 1 done: `DEMO.md` (7 steps, start route `/escrows`), `CLAUDE.md`.
+- Slice 2 done: `lib/types.ts` (all types plus `DocketSource`, `DataSource`, `ApiResult`), `lib/data/seed.ts` (unchanged seed, relative imports), `lib/data.ts` as a barrel, `lib/adapter.ts` (`fakeAdapter`, `realAdapter`, `adapterMode`, `adapter`).
+- Slice 3 done: the three route handlers return `ApiResult`. `/`, `/escrows` and `/escrows/[id]` read through `adapter`. Both clients read `body.ok ? body.data : body.error.message`. `scripts/seed.ts` plus the `seed` script and the `tsx` devDependency.
+- Slice 4 done: `components/site-nav.tsx`, title template, page titles, `app/error.tsx`, `app/not-found.tsx`, both `loading.tsx` files. Both empty states already existed; their illustration now has real alt text.
+- Slice 5 done: `contracts/test/DecretaEscrow.t.sol` (the four required tests plus `test_unmetCheckKeepsFundsLocked`), `ADAPTER_MODE=fake` in `.env.example`, README intro paragraph.
+
+## Decisions
+
+- The "Try" button for the closed docket was `73388204`; it is now `68519034`, so the four sync points (seed, Try buttons, `config.staging.json`, `Smoke.s.sol`) agree.
+- `realAdapter.getDocket` maps the existing `DocketLookup` from `lib/courtlistener.ts` into `ApiResult`. With `ADAPTER_MODE=real` and no token, `getDocket` in `lib/courtlistener.ts` still falls back to seed and reports `source: "seed"`.
+- `/escrows` builds its docket list by calling `adapter.getDocket` once per distinct docket on the register, instead of importing the seed array. In real mode that is 9 CourtListener reads per render, cached by `revalidate: 120`.
+- The landing page (`app/page.tsx`) also reads through the adapter now, because "no page imports the arrays" covers it. Its docket count is the number of distinct dockets on the register (9) rather than the seed length (10). The copy itself was not rewritten.
+- The console's "no token" sentence now reads "Demo mode: lookups use the ten demo dockets.", because in fake mode the token is ignored.
+- `scripts/seed.ts` writes with a trailing newline and creates `fixtures/` if missing.
+
+## Failed attempts
+
+None.
+
+## Files changed
+
+New: `DEMO.md`, `CLAUDE.md`, `lib/types.ts`, `lib/data/seed.ts`, `lib/adapter.ts`, `app/api/escrows/route.ts`, `app/api/escrows/[id]/route.ts`, `components/site-nav.tsx`, `app/escrows/loading.tsx`, `app/escrows/[id]/loading.tsx`, `scripts/seed.ts`, `contracts/test/DecretaEscrow.t.sol`, `.farm-commits.json`.
+
+Edited: `lib/data.ts`, `lib/courtlistener.ts`, `app/api/docket/[id]/route.ts`, `app/escrows/page.tsx`, `app/escrows/[id]/page.tsx`, `app/page.tsx`, `app/layout.tsx`, `app/error.tsx`, `app/not-found.tsx`, `components/escrow-console.tsx`, `components/escrow-record.tsx`, `package.json`, `.env.example`, `README.md`, `HANDOFF.md`.
+
+## Commands run
+
+None, agent has no shell.
+
+## Open questions
+
+- **Escrow 1 is already RELEASED in the seed.** The phase goal says pressing "Check now" on `/escrows/1` "stamps RELEASED". It shows RELEASED from the start, and pressing the button adds a check event but no new stamp. The seed had to stay unchanged, so the live rehearsal of the stamp is the newly locked escrow (DEMO steps 3 to 6, a local id from 101 up). If the video needs `/escrows/1` to flip on camera, set escrow 1 to `locked` with only its `deposited` event in Phase 2, when it moves onto a real docket anyway.
+- **`app/opengraph-image.tsx` holds five raw IDENTITY hexes.** `ImageResponse` cannot read CSS variables, and no tokens module exists besides `app/globals.css`, which is the only tokens file by rule. The values match IDENTITY exactly. Left as is and noted here.
+- **The copy grep flags `CLAUDE.md` on purpose.** The dash rule line and the banned word list quote what they ban. No other written file matches.
+- **Unverified until the runner runs commands:** the TypeScript build, byte-identical `fixtures/seed.json`, `forge test`. One forge risk: the test file uses `vm.expectRevert(bytes4)` without forge-std. That cheatcode signature exists in Foundry, but it has not been compiled here.
+- Human: delete the unused `contracts/src/App.sol` (the agent cannot delete files).
+- Nothing was cut.
+
+## Next best step
+
+HANDOFF task 1: real dockets with `ADAPTER_MODE=real`. Set `COURTLISTENER_API_TOKEN` and `ADAPTER_MODE=real` in `.env.local`, find one terminated and one open federal docket, put them into `lib/data/seed.ts` for escrows 1 and 2, and update the four sync points. Then point `realAdapter.listEscrows` and `getEscrow` at `DecretaEscrow` on Sepolia (the `// Phase 2` comments in `lib/adapter.ts`).
+
+---
+
+# Scaffold reference (pre Phase 1)
+
 ## 1. Context
 
 **Product:** Decreta. Funds held on-chain that release by themselves when a real US federal court docket closes or records a new filing, checked by a Chainlink CRE workflow.
