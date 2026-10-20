@@ -23,6 +23,10 @@ export function explorerTx(hash: string): string {
   return `${EXPLORER_BASE}/tx/${hash}`;
 }
 
+export function explorerAddress(addr: string): string {
+  return `${EXPLORER_BASE}/address/${addr}`;
+}
+
 export function toUnixDay(isoDate: string): bigint {
   return BigInt(Math.floor(Date.parse(`${isoDate}T00:00:00Z`) / 1000));
 }

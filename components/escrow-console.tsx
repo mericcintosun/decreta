@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { isAddress } from "viem";
 import { EmptyState, ErrorState } from "@/components/state-triad";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { WalletPanel } from "@/components/wallet-panel";
-import { explorerTx, isLiveChain, lockFunds } from "@/lib/chain";
+import { contractAddress, explorerAddress, explorerTx, isLiveChain, lockFunds } from "@/lib/chain";
 import { DEMO_PLAINTIFF } from "@/lib/config";
 import type { ErrorCode } from "@/lib/errors";
 import { useWallet } from "@/lib/use-wallet";
@@ -62,6 +62,54 @@ export function RegisterErrorState({ hint }: { hint: string }) {
 
 function DocketErrorState({ message, code, onRetry }: { message: string; code?: ErrorCode; onRetry: () => void }) {
   return <ErrorState title="The docket could not be read" hint={message} code={code} onRetry={onRetry} retryLabel="Read again" />;
+}
+
+function HexText({ value }: { value: string }) {
+  return (
+    <span title={value} className="break-all">
+      {shortHex(value)}
+    </span>
+  );
+}
+
+/** What the lock signs, shown before the wallet popup opens. */
+function LockTrustLine({ sentence }: { sentence: ReactNode }) {
+  const [copied, setCopied] = useState(false);
+
+  if (!isLiveChain || !contractAddress) {
+    return (
+      <div className="border-l-4 border-primary bg-secondary p-4 text-sm">
+        No contract is set. Locking is simulated in this browser and signs nothing.
+      </div>
+    );
+  }
+  const address = contractAddress;
+
+  function copy() {
+    navigator.clipboard
+      .writeText(address)
+      .then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      })
+      .catch(() => undefined);
+  }
+
+  return (
+    <div className="space-y-3 border-l-4 border-primary bg-secondary p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-3">
+        <span className="decreta-label text-muted-foreground">Contract</span>
+        <HexText value={address} />
+        <Button variant="outline" size="sm" onClick={copy}>
+          {copied ? "Copied" : "Copy address"}
+        </Button>
+        <a href={explorerAddress(address)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+          Etherscan
+        </a>
+      </div>
+      {sentence && <p>{sentence}</p>}
+    </div>
+  );
 }
 
 function RegisterEmptyState({ onRead, onShowAll }: { onRead: () => void; onShowAll: () => void }) {
@@ -288,7 +336,7 @@ export function EscrowConsole({
                 <p className="mt-3 text-sm">
                   Filed {docket.dateFiled}. {docket.dateTerminated ? `Terminated ${docket.dateTerminated}. ` : ""}
                   Last filing {docket.dateLastFiling ?? "not recorded"}. {docket.natureOfSuit}.{" "}
-                  <a href={courtListenerUrl(docket.id)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                  <a href={courtListenerUrl(docket.id)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
                     View on CourtListener
                   </a>
                   {preview.source === "seed" && <span className="text-muted-foreground"> (demo record)</span>}
@@ -361,6 +409,18 @@ export function EscrowConsole({
 
             <div className="space-y-4 border-t border-border pt-6">
               <WalletPanel wallet={wallet} />
+              <LockTrustLine
+                sentence={
+                  docket && amountOk && addressesOk && contractAddress ? (
+                    <>
+                      This transaction locks {amount} Sepolia ETH in DecretaEscrow <HexText value={contractAddress} /> on
+                      Sepolia (11155111). It pays <HexText value={onMet} /> when docket {docket.docketNumber}{" "}
+                      {condition === "terminated" ? "is terminated" : `has a filing after ${filedAfter}`}, or returns it to{" "}
+                      <HexText value={onExpiry} /> after {deadline}. Nothing else is signed.
+                    </>
+                  ) : null
+                }
+              />
               <div className="flex flex-wrap items-center gap-4">
                 <Button
                   size="lg"
@@ -385,7 +445,7 @@ export function EscrowConsole({
               <CardDescription>
                 {conditionSentence(confirmed.escrow)}.{" "}
                 {confirmed.mode === "chain" ? (
-                  <a href={explorerTx(confirmed.escrow.events[0].txHash)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                  <a href={explorerTx(confirmed.escrow.events[0].txHash)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
                     Deposited event on Etherscan
                   </a>
                 ) : (
