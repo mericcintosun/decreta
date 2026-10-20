@@ -9,6 +9,7 @@ interface Vm {
     function deal(address who, uint256 newBalance) external;
     function warp(uint256 newTimestamp) external;
     function expectRevert(bytes4 revertData) external;
+    function expectEmit(bool checkTopic1, bool checkTopic2, bool checkTopic3, bool checkData) external;
 }
 
 /// Tests for the release rule on DecretaEscrow. Docket 68519034 is the closed
@@ -25,6 +26,9 @@ contract DecretaEscrowTest {
 
     DecretaEscrow escrow;
     uint64 deadline;
+
+    // Redeclared from DecretaEscrow so vm.expectEmit can match it.
+    event Released(uint256 indexed id, address indexed to, uint256 amount);
 
     function setUp() public {
         vm.warp(1_760_000_000);
@@ -105,5 +109,34 @@ contract DecretaEscrowTest {
         vm.prank(FORWARDER);
         vm.expectRevert(DecretaEscrow.NotLocked.selector);
         escrow.onReport("", _report(id, true));
+    }
+
+    function test_releaseEmitsReleased() public {
+        uint256 id = _lock();
+
+        vm.expectEmit(true, true, false, true);
+        emit Released(id, PLAINTIFF, AMOUNT);
+        vm.prank(FORWARDER);
+        escrow.onReport("", _report(id, true));
+    }
+
+    function test_createRevertsOnZeroValue() public {
+        vm.expectRevert(DecretaEscrow.InvalidEscrow.selector);
+        escrow.createEscrow{value: 0}(DOCKET, DecretaEscrow.Condition.Terminated, 0, deadline, PLAINTIFF, DEFENDANT);
+    }
+
+    function testFuzz_releasePaysExactAmount(uint96 amount) public {
+        if (amount == 0) return;
+        vm.deal(address(this), uint256(amount));
+        uint256 id = escrow.createEscrow{value: amount}(
+            DOCKET, DecretaEscrow.Condition.Terminated, 0, deadline, PLAINTIFF, DEFENDANT
+        );
+        uint256 before = PLAINTIFF.balance;
+
+        vm.prank(FORWARDER);
+        escrow.onReport("", _report(id, true));
+
+        require(PLAINTIFF.balance - before == uint256(amount), "payee got exactly the amount");
+        require(address(escrow).balance == 0, "contract emptied");
     }
 }
