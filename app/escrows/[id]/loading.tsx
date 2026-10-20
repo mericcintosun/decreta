@@ -1,4 +1,4 @@
-export default function EscrowRecordLoading() {
+export default function EscrowRecordSkeleton() {
   return (
     <div className="decreta-ruled">
       <div className="decreta-rise mx-auto max-w-3xl space-y-6 px-4 py-14 sm:py-20" role="status" aria-live="polite">

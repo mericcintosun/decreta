@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
-import { EscrowConsole } from "@/components/escrow-console";
+import { EscrowConsole, RegisterErrorState } from "@/components/escrow-console";
 import { adapter, hasLiveDockets } from "@/lib/adapter";
 import { totals, type DocketSnapshot } from "@/lib/data";
+
+// The register reads the chain in real mode; never serve a build-time copy.
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Escrow desk",
@@ -30,11 +33,7 @@ export default async function EscrowDeskPage() {
             holds {t.count} escrows: {t.releasedEth} ETH already paid out on docket events, {t.lockedEth} ETH still
             waiting on the court.
           </p>
-          {!list.ok && (
-            <p role="alert" className="border-l-4 border-bad bg-secondary p-3 text-sm">
-              The register could not be read: {list.hint}
-            </p>
-          )}
+          {!list.ok && <RegisterErrorState hint={list.hint} />}
         </header>
         <EscrowConsole
           seedEscrows={escrows}
