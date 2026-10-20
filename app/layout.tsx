@@ -36,44 +36,42 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main>{children}</main>
         <footer className="border-t border-border">
-          <div className="mx-auto max-w-5xl space-y-3 px-4 py-8 text-sm text-muted-foreground">
-            <p>Decreta reads public docket data from CourtListener (Free Law Project). Sepolia testnet only. Not legal advice.</p>
-            <p>
-              {CONTRACT_ADDRESS ? (
-                <>
-                  Contract:{" "}
-                  <a
-                    href={`${EXPLORER_BASE}/address/${CONTRACT_ADDRESS}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="break-all underline underline-offset-4"
-                  >
-                    {CONTRACT_ADDRESS}
-                  </a>{" "}
-                  on Sepolia (chain id {CHAIN_ID}).
-                </>
-              ) : (
-                "No contract is set on this deployment; locks are simulated."
-              )}{" "}
-              Source:{" "}
+          <div className="mx-auto flex max-w-5xl flex-col gap-3 px-4 py-8 text-sm text-muted-foreground">
+            <p>Public docket data from CourtListener (Free Law Project). Sepolia testnet only. Not legal advice.</p>
+            <p className="flex flex-wrap items-center gap-x-6">
+              <span className="py-3">
+                {CONTRACT_ADDRESS ? (
+                  <>
+                    Contract:{" "}
+                    <a
+                      href={`${EXPLORER_BASE}/address/${CONTRACT_ADDRESS}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="break-all underline underline-offset-4"
+                    >
+                      {CONTRACT_ADDRESS}
+                    </a>{" "}
+                    on Sepolia (chain id {CHAIN_ID}).
+                  </>
+                ) : (
+                  "No contract is set on this deployment; locks are simulated."
+                )}
+              </span>
               <a
                 href="https://github.com/mericcintosun/decreta"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all underline underline-offset-4"
+                className="inline-flex min-h-11 items-center underline underline-offset-4"
               >
-                github.com/mericcintosun/decreta
+                Source
               </a>
-            </p>
-            <p>
-              Built for BLI Legal Tech Hackathon 2:{" "}
               <a
                 href="https://dorahacks.io/hackathon/legal-hack-2026"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="break-all underline underline-offset-4"
+                className="inline-flex min-h-11 items-center underline underline-offset-4"
               >
-                dorahacks.io/hackathon/legal-hack-2026
+                Hackathon
               </a>
             </p>
           </div>
