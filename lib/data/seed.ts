@@ -7,6 +7,7 @@
 // escrows 1 and 2 onto two verified real dockets (one terminated, one open);
 // see HANDOFF.md.
 
+import { COURT_NAMES } from "../courts";
 import type { DocketSnapshot, Escrow, EscrowEvent, EventKind, Hex, Party } from "../types";
 
 // Deterministic hex so seed hashes and addresses are stable between server
@@ -34,18 +35,7 @@ export function mockAddress(seed: string): Hex {
   return `0x${hexFrom(`addr:${seed}`, 40)}`;
 }
 
-export const COURT_NAMES: Record<string, string> = {
-  nysd: "U.S. District Court, Southern District of New York",
-  paed: "U.S. District Court, Eastern District of Pennsylvania",
-  txsd: "U.S. District Court, Southern District of Texas",
-  cand: "U.S. District Court, Northern District of California",
-  mad: "U.S. District Court, District of Massachusetts",
-  nhd: "U.S. District Court, District of New Hampshire",
-  wawd: "U.S. District Court, Western District of Washington",
-  flmd: "U.S. District Court, Middle District of Florida",
-  vaed: "U.S. District Court, Eastern District of Virginia",
-  ilnd: "U.S. District Court, Northern District of Illinois",
-};
+export { COURT_NAMES };
 
 export const dockets: DocketSnapshot[] = [
   {
@@ -179,12 +169,11 @@ export const escrows: Escrow[] = [
     memo: "Settlement balance due when the case is dismissed under the stipulation.",
     onMet: party("Harlow Freight LLC (plaintiff)"),
     onExpiry: party("Brightline Logistics Inc. (defendant)"),
-    status: "released",
+    // Locked, mirroring the escrow Smoke.s.sol creates as id 1 on a fresh contract,
+    // so pressing "Check the docket now" stamps RELEASED on camera.
+    status: "locked",
     events: [
       ev(1, "deposited", "2026-09-12T15:04:00Z", "Brightline locked 0.01 ETH against docket 1:25-cv-04417."),
-      ev(1, "checked", "2026-09-29T14:00:00Z", "CRE check: case open, last filing 2026-09-24."),
-      ev(1, "checked", "2026-10-01T14:00:00Z", "CRE check: date_terminated 2026-09-30 agreed by the DON."),
-      ev(1, "released", "2026-10-01T14:00:00Z", "0.01 ETH released to Harlow Freight LLC."),
     ],
   },
   {
