@@ -3,7 +3,7 @@ import { CONTRACT_ADDRESS, MAX_ESCROWS_LISTED } from "@/lib/config";
 import { getDocket as getCourtListenerDocket, hasLiveCourtListener } from "@/lib/courtlistener";
 import { escrows as seedEscrows } from "@/lib/data/seed";
 import { fail } from "@/lib/errors";
-import { readEscrow, readEscrowCount, readEscrowEvents } from "@/lib/escrow-chain";
+import { readBalanceEth, readEscrow, readEscrowCount, readEscrowEvents } from "@/lib/escrow-chain";
 import { coreLog } from "@/lib/log";
 import type { Escrow } from "@/lib/types";
 import { seedDocketResult, seedEscrowResult } from "./fake";
@@ -55,12 +55,16 @@ export const realAdapter: DecretaAdapter = {
       return read;
     }
 
-    const history = await readEscrowEvents(id, read.data);
+    const [history, payeeBalanceEth] = await Promise.all([
+      readEscrowEvents(id, read.data),
+      readBalanceEth(read.data.onMet.address),
+    ]);
     const escrow: Escrow = {
       ...read.data,
       events: history.events,
       // getEscrow zeroes the amount once paid out; the Deposited log keeps it.
       amountEth: history.depositedWei !== null ? formatEther(history.depositedWei) : read.data.amountEth,
+      payeeBalanceEth,
     };
     coreLog("escrow read", { id, status: escrow.status, ms: Date.now() - started });
     return { ok: true, data: escrow, source: "chain" };

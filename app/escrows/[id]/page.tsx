@@ -3,6 +3,9 @@ import Link from "next/link";
 import { EscrowRecord } from "@/components/escrow-record";
 import { adapter } from "@/lib/adapter";
 
+// The record reads the chain in real mode; never serve a cached first render.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   return { title: `Escrow No. ${id}` };

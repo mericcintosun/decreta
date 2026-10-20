@@ -57,6 +57,8 @@ export interface Escrow {
   local?: boolean;
   /** Docket as seen at creation time, cached for escrows outside the seed set. */
   docketSnapshot?: DocketSnapshot;
+  /** onMet's Sepolia balance at read time (real adapter only); null when the RPC did not answer. */
+  payeeBalanceEth?: string | null;
 }
 
 /** The failure branch: a typed code for the UI, a plain sentence for people. */
