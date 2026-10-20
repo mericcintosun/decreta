@@ -1,3 +1,85 @@
+REDEPLOY NEEDED: DecretaEscrow (Phase 5 bytecode change)
+
+1. Check that the `FARM_EVM_PRIVATE_KEY` wallet holds at least 0.1 Sepolia ETH (top up at https://faucets.chain.link/sepolia).
+2. Press the Kontrat deploy step (`Deploy.s.sol`), then set `NEXT_PUBLIC_CONTRACT_ADDRESS` and `DEPLOYED_CONTRACT` to the new address.
+3. Re-run `contracts:smoke` and record its `createEscrow` tx hash in the README as on-chain proof.
+4. Run `demo:reset`.
+5. Set `escrowAddress` in `cre/decreta-docket/config.staging.json` to the new address.
+6. Update the address line in `SECURITY.md` and README "Deployed contract" together (they must match byte for byte).
+7. Re-run `cre workflow simulate decreta-docket --target staging-settings --broadcast`.
+
+# Phase 5: security pass (2026-10-20)
+
+## Goal
+
+Harden the escrow contract (reentrancy guard on both payout paths, an owner pause that blocks only new locks, a zero check on `setForwarder`), show the contract and what the lock signs before the wallet popup (DEMO step 3), disclose contract, chain and source in every footer, and write `SECURITY.md`. No new feature, route or dependency.
+
+## Status
+
+All four slices are written. Nothing was compiled, built or tested: the agent had no shell. Nothing was cut.
+
+- Slice 1: `contracts/src/DecretaEscrow.sol` has `_entered` and the `nonReentrant` modifier (line 68) on `onReport` (line 112) and `refundAfterDeadline` (line 130), `paused` plus `setPaused` and `PausedSet`, `Paused()` and `Reentrancy()` errors, the zero check in `setForwarder`, and the two "Open:" comments. Four tests and a `ReentrantPayee` helper in `contracts/test/DecretaEscrow.t.sol`. `lib/escrow-abi.ts` gains `paused`, `setPaused` and the two errors.
+- Slice 2: `explorerAddress` in `lib/chain.ts`. `LockTrustLine` in `components/escrow-console.tsx` sits between `<WalletPanel>` and the Lock row: contract (short, `title`, `break-all`), "Copy address" (2 s "Copied"), Etherscan link, and the sentence ending "Nothing else is signed." The fake path reads "No contract is set. Locking is simulated in this browser and signs nothing."
+- Slice 3: second footer paragraph in `app/layout.tsx` (contract linked to Etherscan or the "No contract is set" line, chain id from `CHAIN_ID`, source repo link). All 7 new-tab links carry `rel="noopener noreferrer"`.
+- Slice 4: `SECURITY.md`, one README sentence in the trust note, this section.
+
+Acceptance read-through (Grep, by the agent):
+- `nonReentrant` in `DecretaEscrow.sol`: 3 hits (modifier plus 2 uses).
+- `transferFrom|approve|type(uint256).max` in `contracts/src`: 0 hits.
+- `rel="noreferrer"` in `app` and `components`: 0. `target="_blank"` and `noopener` sit on the same 7 links.
+- `requestAddresses|eth_requestAccounts`: only `lib/use-wallet.ts:84`, inside `connect`, which only the `onClick` in `components/wallet-panel.tsx:66` calls.
+- `eth_sign|personal_sign|signMessage|signTypedData`: 0 hits in `app`, `components`, `lib`.
+- `switchChain|addChain`: only `lib/use-wallet.ts:96` and `:102`, both with `sepolia`.
+- `http://` in `app`, `components`, `lib`: only the `xmlns` line in `app/icon.svg`.
+- No `<form` in `app`, `components` or `lib`. The docket lookup fetches `/api/docket/${id}`.
+- Secret names (`PRIVATE_KEY`, `COURTLISTENER_API_TOKEN`, `SEPOLIA_RPC_URL`) appear only in server modules under `lib/` (`secrets.ts`, `courtlistener.ts`, `adapters/*`), none in `components`, `app/**/*.tsx` or `lib/use-*.ts`. `NEXT_PUBLIC_*` keys are the contract address, the demo plaintiff address, the chain id and the site URL.
+- Tripwire hexes, keyframes, stagger styles and `backdrop-blur` in `app` and `components`: 0 hits. Copy grep over the files written: 0 hits.
+
+## Decisions
+
+- **Token flow.** `createEscrow` credits `msg.value`, which is exact for ETH, so no fee-on-transfer path exists. Funds leave only through `_send` to the stored `onMet` (`onReport`, met) or `onExpiry` (`refundAfterDeadline`, after the deadline). Each value move emits `Deposited`, `Released` or `Refunded` with the address and the amount. `_send` reverts with `TransferFailed` when the call returns false.
+- **No withdraw or sweep exists.** The owner can only change the forwarder and the pause flag. The owner cannot move escrowed funds.
+- **Every external state-mutating function:** `createEscrow` open (commented), `onReport` forwarder-only plus guard, `refundAfterDeadline` open (commented) plus guard, `setForwarder` and `setPaused` owner-only.
+- **Both payout paths** read checks, effects (status, amount zeroed), emit, then `_send` as the last line.
+- **Pause blocks `createEscrow` only,** so a pause can never trap funds.
+- **`setForwarder(address(0))` reverts `InvalidEscrow`.** The constructor still accepts any forwarder; `Deploy.s.sol` always passes one.
+- **Forwarder trust gap: HIGH, parked.** The MockKeystoneForwarder `0x15fc6ae953e024d975e77382eeec56a9101f9f88` accepts any simulated report. Shortest fix path: decode `workflowOwner` from `metadata` per Chainlink's ReceiverTemplate layout; check it against an owner-set `expectedWorkflowOwner`, zero meaning disabled so `cre workflow simulate` keeps working; enable it after a simulate run logs the real metadata; then `setForwarder` to the production KeystoneForwarder. Not done because it touches how `onReport` reads its input (ask-first).
+- **Reverting-payee wedge: LOW, parked.** A contract payee whose `receive` reverts blocks release until the deadline, and forever if `onExpiry` reverts too. Shortest fix: credit `claimable[to]` on a failed send and add `claim()` callable only by `to`.
+- **Trust line sentence** renders only when a docket is read, the amount is positive and both addresses are valid; otherwise the row shows the contract, copy and Etherscan only. The amount shown is the same `amount` state passed to `lockFunds`.
+- **Footer** uses `EXPLORER_BASE` from `lib/config.ts` for the Etherscan link, not `explorerAddress`, because `lib/chain.ts` is a client-side module and the layout is a server component.
+- **Blockaid warning.** If MetaMask shows the red Blockaid banner on connect, it may persist after this phase: it comes from domain and contract reputation, which a code change does not fix. Human: record it here if seen.
+
+## Failed attempts
+
+None.
+
+## Files changed
+
+New: `SECURITY.md`.
+
+Edited: `contracts/src/DecretaEscrow.sol`, `contracts/test/DecretaEscrow.t.sol`, `lib/escrow-abi.ts`, `lib/chain.ts`, `components/escrow-console.tsx`, `components/escrow-record.tsx`, `components/escrow-pair.tsx`, `components/wallet-panel.tsx`, `app/layout.tsx`, `README.md`, `HANDOFF.md`, `.farm-commits.json` (12 tracked files plus the plan file).
+
+Untouched: `cre/`, `scripts/`, `app/api/**`, `lib/adapters/**`, `lib/escrow-chain.ts`, `app/opengraph-image.tsx`, `lib/data/seed.ts`, `contracts/script/Smoke.s.sol` (still reads `DEPLOYED_CONTRACT`, `createEscrow` signature unchanged), `contracts/script/Deploy.s.sol`.
+
+## Commands run
+
+None.
+
+## Open questions
+
+- **Unverified until the runner and the human run commands:**
+  - `forge build && forge test`, including the 4 new tests. Risk points: `vm.prank` followed by `vm.expectRevert` (the same order the existing tests use), and `try`/`catch` inside `ReentrantPayee.receive`.
+  - `npm run build`. Risk point: `escrowAbi` now has `error` entries; viem accepts them, and `scripts/demo-reset.ts` and `lib/escrow-chain.ts` only call functions and events by name.
+  - The browser walk: no popup on load, connect after the click, chain prompt 11155111, lock popup amount equals the trust line amount, no mixed-content warning.
+- **Strict reading of "HANDOFF opens with REDEPLOY NEEDED".** The line is now line 1, above the old `# HANDOFF: Decreta` title, which moved below this section.
+- **Forwarder trust gap** (HIGH) and **reverting-payee wedge** (LOW), see Decisions.
+
+## Next best step
+
+Human: the REDEPLOY steps above, then `forge test`. Then Phase 6 jury round.
+
+---
+
 # HANDOFF: Decreta
 
 You are picking up a working scaffold. Read this whole file, then start on Mission task 1. Keep `npm run build` green after every change.

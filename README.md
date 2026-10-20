@@ -51,7 +51,7 @@ Remove `main.ts` and steps 5, 6 and 8 never change state.
 - There is no challenge window yet. A 72-hour timelock during which either side can dispute a release is the next contract change.
 - Sepolia testnet only. This is not legal advice.
 
-**Trust model note.** `onReport` accepts only the configured CRE forwarder. On Sepolia that is the MockKeystoneForwarder used by `cre workflow simulate --broadcast`, which accepts any simulated report, so today anyone who can run a simulation against this contract can release a locked escrow. The next hardening is the production KeystoneForwarder (via `setForwarder`) plus a check in `onReport` that the report's workflow owner and workflow id match ours.
+**Trust model note.** `onReport` accepts only the configured CRE forwarder. On Sepolia that is the MockKeystoneForwarder used by `cre workflow simulate --broadcast`, which accepts any simulated report, so today anyone who can run a simulation against this contract can release a locked escrow. The next hardening is the production KeystoneForwarder (via `setForwarder`) plus a check in `onReport` that the report's workflow owner and workflow id match ours. The owner pause blocks new locks only; releases and refunds always run. See `SECURITY.md`.
 
 ## Tech stack
 
