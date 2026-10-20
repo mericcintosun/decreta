@@ -1,5 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
+import { DeskCount } from "@/components/desk-count";
+import { SceneSlot } from "@/components/scene-slot";
+import { TrustDiagram } from "@/components/trust-diagram";
 import { Button } from "@/components/ui/button";
 import { adapter } from "@/lib/adapter";
 import { totals } from "@/lib/data";
@@ -36,6 +38,10 @@ function closedClause(escrow: Escrow, docket: DocketSnapshot): string | null {
   return null;
 }
 
+const rail = "lg:grid lg:grid-cols-[11rem_minmax(0,65ch)] lg:gap-x-10";
+const railHead = "decreta-label mb-4 text-primary lg:mb-0";
+const column = "decreta-margin min-w-0 text-lg leading-relaxed lg:pl-8";
+
 export default async function Home() {
   const [escrows, closed, open] = await Promise.all([
     read(() => adapter.listEscrows()),
@@ -50,18 +56,17 @@ export default async function Home() {
     closed && closedDocket && open && openDocket && open.status === "locked" ? closedClause(closed, closedDocket) : null;
 
   // L3 editorial grid: an 11rem margin rail for the column heads beside one 65ch reading column.
-  // Below lg the grid collapses and each head stacks above its section.
+  // Below lg the grid collapses and each head stacks above its section. Figures may run 10rem past the column at lg.
   return (
     <article className="mx-auto max-w-5xl px-4 py-16 sm:py-20">
-      <section className="lg:grid lg:grid-cols-[11rem_minmax(0,65ch)] lg:gap-x-10">
-        <p className="decreta-label mb-4 text-primary lg:mb-0 lg:pt-4">Settlement escrow</p>
+      <section className={rail}>
+        <p className={`${railHead} lg:pt-4`}>Settlement escrow</p>
         <div className="decreta-margin min-w-0 lg:pl-8">
           <header className="decreta-seq space-y-6 sm:space-y-7">
             <h1 className="text-5xl font-semibold leading-[1.05] sm:text-6xl">The court decides. The money follows.</h1>
-            <p className="max-w-[65ch] text-xl leading-relaxed text-muted-foreground">
-              Decreta holds settlement money on-chain and releases it by itself when a real US federal court docket
-              closes, or when a new filing lands on it. A Chainlink CRE workflow reads the docket from CourtListener, the
-              network agrees on what it saw, and the contract pays the right party. Nobody signs off.
+            <p className="max-w-[52ch] text-xl leading-snug text-muted-foreground sm:text-2xl">
+              Decreta locks settlement money on-chain and pays it out by itself when a real US federal docket closes,
+              checked by a Chainlink CRE workflow.
             </p>
             <div className="pt-2 sm:pt-4">
               <Button asChild size="lg">
@@ -70,17 +75,13 @@ export default async function Home() {
             </div>
           </header>
 
-          <figure className="decreta-rise mt-16 sm:mt-20">
-            <div className="decreta-ruled border border-border bg-secondary p-6">
-              <Image
-                src="/illustrations/docket-sheet.svg"
-                alt="A docket sheet stamped TERMINATED, with the escrow line marked as paid"
-                width={640}
-                height={300}
-                className="h-auto w-full"
-                unoptimized
-              />
-            </div>
+          <figure className="decreta-rise mt-10 sm:mt-12 lg:w-[calc(100%+10rem)]">
+            <SceneSlot n={1} fallback="/illustrations/docket-sheet.svg"
+              alt="A docket sheet stamped TERMINATED, with the escrow line marked as paid"
+              width={640}
+              height={300}
+              className="decreta-ruled p-6"
+            />
             {closed && closedDocket && (
               <figcaption className="mt-3 max-w-[65ch] text-sm leading-relaxed text-muted-foreground">
                 Escrow No. 1 in the demo set: {closedDocket.caseName}, {closedDocket.docketNumber}.{" "}
@@ -94,64 +95,90 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mt-16 sm:mt-20 lg:grid lg:grid-cols-[11rem_minmax(0,65ch)] lg:gap-x-10">
-        <p className="decreta-label mb-4 text-primary lg:mb-0 lg:pt-3">The problem</p>
-        <div className="decreta-margin min-w-0 space-y-5 text-lg leading-relaxed lg:pl-8">
+      <section className={`decreta-entrance mt-16 sm:mt-20 ${rail}`}>
+        <p className={`${railHead} lg:pt-3`}>The problem</p>
+        <div className={`${column} space-y-5`}>
           <h2 className="text-3xl font-semibold">The slow part of a settlement is the last step</h2>
           <p className="max-w-[65ch]">
-            Parties agree on a number. The agreement says the money moves once the court dismisses the case. Until then
-            the funds sit in a lawyer&apos;s trust account, and release depends on someone checking PACER, seeing the
-            dismissal, and wiring the money. That takes days, it is easy to get wrong, and if the other side does not
-            trust the lawyer, both sides pay an escrow company on top.
+            The agreement says the money moves once the court dismisses the case, yet until then it sits in a
+            lawyer&apos;s trust account and a person has to notice the dismissal and wire the money.
           </p>
-          <p className="max-w-[65ch]">
-            Crypto escrow does not fix this. Kleros moves the dispute to its own jury, and signature-based escrow needs
-            both parties to cooperate at exactly the moment they trust each other least. People already in federal
-            court do not want a second court. They want the first one to be the trigger.
+          <p className="max-w-[65ch] text-muted-foreground">
+            Kleros adds a second court and signature escrow needs both sides to sign at the moment they trust each other
+            least, while people already in federal court want the first court to be the trigger.
           </p>
         </div>
       </section>
 
       {t && (
-        <section className="mt-16 border-t border-border pt-8 sm:mt-20 lg:grid lg:grid-cols-[11rem_minmax(0,65ch)] lg:gap-x-10">
-          <p className="decreta-label mb-4 text-primary lg:mb-0 lg:pt-1.5">The desk today</p>
-          <div className="decreta-margin min-w-0 lg:pl-8">
-            <p className="max-w-[65ch] text-lg leading-relaxed">
-              The demo desk holds {t.count} escrows worth {t.totalEth} Sepolia ETH across {docketCount} federal
-              dockets. {t.released} have already paid out because their dockets closed or recorded the filing they were
-              waiting for, {t.locked} are still locked, and {t.refunded} went back to the depositor after the deadline
-              passed with the case still open.
+        <section className={`decreta-entrance mt-16 border-t border-border pt-8 sm:mt-20 ${rail}`}>
+          <p className={`${railHead} lg:pt-1.5`}>The desk today</p>
+          <div className={column}>
+            <p className="max-w-[65ch]">
+              The demo desk holds{" "}
+              <DeskCount value={Number(t.totalEth)} decimals={2} className="font-display text-5xl leading-none text-primary" />{" "}
+              Sepolia ETH in <DeskCount value={t.count} /> escrows across {docketCount} federal dockets, of which{" "}
+              <DeskCount value={t.released} /> paid out when their docket moved, <DeskCount value={t.locked} /> are still
+              locked and {t.refunded} went back to the depositor after its deadline.
             </p>
           </div>
         </section>
       )}
 
-      <section
-        id="how"
-        className="mt-16 scroll-mt-20 sm:mt-20 lg:grid lg:grid-cols-[11rem_minmax(0,65ch)] lg:gap-x-10"
-      >
-        <p className="decreta-label mb-4 text-primary lg:mb-0 lg:pt-3">Procedure</p>
-        <div className="decreta-margin min-w-0 space-y-5 text-lg leading-relaxed lg:pl-8">
+      <section id="how" className={`mt-16 scroll-mt-20 sm:mt-20 ${rail}`}>
+        <p className={`${railHead} lg:pt-3`}>Procedure</p>
+        <div className={`${column} space-y-8`}>
           <h2 className="text-3xl font-semibold">How a release happens</h2>
-          <ol className="max-w-[65ch] list-decimal space-y-4 pl-6 marker:font-display marker:text-primary">
-            <li>
-              The depositor pastes a CourtListener docket link. The desk pulls the case name, court, status and last
-              filing date, so both sides see the same record before any money moves.
+          <ol className="max-w-[65ch] list-decimal space-y-10 pl-6 marker:font-display marker:text-primary">
+            <li className="decreta-entrance">
+              <SceneSlot n={2} fallback="/illustrations/step-paste.svg"
+                alt="A docket sheet with its link line highlighted"
+                width={320}
+                height={200}
+                className="max-w-xs"
+              />
+              <p className="mt-4">
+                The depositor pastes a CourtListener docket link, and both sides see the same case name, court and
+                status before any money moves.
+              </p>
             </li>
-            <li>
-              They pick one condition: release when the case is terminated, or release when a new filing appears after a
-              chosen date (useful for a fee that depends on an approval order). Then they set a payee, a refund address
-              and a deadline, and lock the funds in <span className="font-semibold">DecretaEscrow</span> on Sepolia.
+            <li className="decreta-entrance">
+              <SceneSlot n={3} fallback="/illustrations/step-lock.svg"
+                alt="A strongbox shut with a rust clasp"
+                width={320}
+                height={200}
+                className="max-w-xs"
+              />
+              <p className="mt-4">
+                They pick one docket event, a payee, a refund address and a deadline, and lock the funds in{" "}
+                <span className="font-semibold">DecretaEscrow</span> on Sepolia.
+              </p>
             </li>
-            <li>
-              Every ten minutes a Chainlink CRE workflow calls CourtListener&apos;s v4 dockets endpoint from each node in
-              the DON. The nodes agree on <span className="font-semibold">date_terminated</span> and{" "}
-              <span className="font-semibold">date_last_filing</span>, and only then is a signed report written to the
-              contract.
+            <li className="decreta-entrance">
+              <SceneSlot n={4} fallback="/illustrations/step-agree.svg"
+                alt="Three identical slips side by side, each with the same rust stamp"
+                width={320}
+                height={200}
+                className="max-w-xs"
+              />
+              <p className="mt-4">
+                Every ten minutes a Chainlink CRE workflow reads the docket on each DON node, and only when the nodes agree
+                on{" "}
+                <span className="font-semibold">date_terminated</span> and{" "}
+                <span className="font-semibold">date_last_filing</span> is a signed report written to the contract.
+              </p>
             </li>
-            <li>
-              The contract accepts reports from the CRE forwarder and nobody else. A met condition pays the payee in the
-              same transaction. If the deadline passes first, anyone can trigger the refund.
+            <li className="decreta-entrance">
+              <SceneSlot n={5} fallback="/illustrations/step-pay.svg"
+                alt="A sealed envelope leaving a ledger line toward a payee tab"
+                width={320}
+                height={200}
+                className="max-w-xs"
+              />
+              <p className="mt-4">
+                A met condition pays the payee in the same transaction, and if the deadline passes first anyone can
+                trigger the refund.
+              </p>
             </li>
           </ol>
           {sideBySide && open && openDocket && (
@@ -170,31 +197,26 @@ export default async function Home() {
         </div>
       </section>
 
-      <section className="mt-16 sm:mt-20 lg:grid lg:grid-cols-[11rem_minmax(0,65ch)] lg:gap-x-10">
-        <p className="decreta-label mb-4 text-primary lg:mb-0 lg:pt-3">Trust</p>
-        <div className="decreta-margin min-w-0 space-y-8 text-lg leading-relaxed lg:pl-8">
+      <section className={`decreta-entrance mt-16 sm:mt-20 ${rail}`}>
+        <p className={`${railHead} lg:pt-3`}>Trust</p>
+        <div className={`${column} space-y-6`}>
           <h2 className="text-3xl font-semibold">What you are trusting</h2>
-          <section className="space-y-3">
+          <section className="space-y-5">
             <h3 className="font-display text-xl font-semibold">The trust model</h3>
             <p className="max-w-[65ch]">
-              The data source is CourtListener, the Free Law Project&apos;s mirror of PACER, which RECAP users and bulk
-              imports keep current. If a docket there is stale, the escrow waits; it never pays early on missing data,
-              because an absent date reads as &quot;not yet&quot;.
+              CourtListener is the only data source, the DON must agree on the two dates, and the contract accepts
+              reports from one forwarder address.
             </p>
-            <p className="max-w-[65ch]">
-              The DON reaches consensus on the two dates, so one faulty node cannot invent a dismissal. The contract only
-              trusts the forwarder address it was deployed with, and the owner can rotate that address.
-            </p>
+            <TrustDiagram />
           </section>
-          <section className="space-y-3">
+          <section className="space-y-3 pt-4">
             <h3 className="font-display text-xl font-semibold">Limits we know about</h3>
             <p className="max-w-[65ch]">
-              A terminated case is not always a case decided in your favor. Decreta binds money to a docket event, so the
-              condition has to match what the settlement agreement actually says. Pick the event, not the outcome.
+              A terminated case is not a win, so the docket event you pick has to match what the settlement agreement
+              actually says.
             </p>
             <p className="max-w-[65ch]">
-              There is no challenge window yet. A timelock that lets either side dispute a release for 72 hours is the
-              next contract change. It runs on Sepolia only and is not legal advice.
+              There is no 72-hour challenge window yet, so nobody can dispute a release once the report lands.
             </p>
           </section>
         </div>
