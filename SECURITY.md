@@ -4,7 +4,7 @@ Decreta is a Sepolia testnet project. Do not send mainnet funds to any address h
 
 ## 1. Contract and chain
 
-- Deployed contract: `<NEXT_PUBLIC_CONTRACT_ADDRESS>` on Sepolia, https://sepolia.etherscan.io/address/<address>. The app reads it from `NEXT_PUBLIC_CONTRACT_ADDRESS` (`lib/config.ts`). Phase 5 changed the bytecode, so this address changes after the next deploy; update this line and the README together.
+- Deployed contract: `<NEXT_PUBLIC_CONTRACT_ADDRESS>` on Sepolia, https://sepolia.etherscan.io/address/<NEXT_PUBLIC_CONTRACT_ADDRESS>. The app reads it from `NEXT_PUBLIC_CONTRACT_ADDRESS` (`lib/config.ts`). Phase 5 changed the bytecode, so this address changes after the next deploy; update this line and the README together.
 - Chain: Ethereum Sepolia, chain id 11155111.
 - Source: `contracts/src/DecretaEscrow.sol`. ETH only.
 - Forwarder: `0x15fc6ae953e024d975e77382eeec56a9101f9f88`, the Sepolia MockKeystoneForwarder used by `cre workflow simulate --broadcast`.

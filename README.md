@@ -6,9 +6,16 @@ Decreta is settlement escrow bound to a US federal court docket: the parties loc
 | --- | --- |
 | Live demo | https://decreta.vercel.app |
 | Video | https://decreta.vercel.app/demo-video.mp4 |
-| Contract (Sepolia) | `<NEXT_PUBLIC_CONTRACT_ADDRESS>`, https://sepolia.etherscan.io/address/<address> (placeholder until the Phase 5 redeploy) |
+| Contract (Sepolia) | `<NEXT_PUBLIC_CONTRACT_ADDRESS>`, https://sepolia.etherscan.io/address/<NEXT_PUBLIC_CONTRACT_ADDRESS> (set by the deploy step; until then the live demo simulates the lock, see What runs where) |
+| Example deposit tx | <SMOKE_CREATE_ESCROW_TX>, the Smoke.s.sol createEscrow on Sepolia |
 | Source | https://github.com/mericcintosun/decreta |
 | Hackathon | BLI Legal Tech Hackathon 2, https://dorahacks.io/hackathon/legal-hack-2026 (track: General, no tracks verified) |
+
+## What runs where
+
+- **Docket lookup:** live CourtListener v4 through `app/api/docket/[id]/route.ts` and `lib/courtlistener.ts` when `COURTLISTENER_API_TOKEN` is set. Otherwise the seed dockets in `lib/data/seed.ts`, whose case names are illustrative.
+- **Lock and check:** on decreta.vercel.app these are simulated in the browser (`lib/adapters/fake.ts`, the `!isLiveChain` branch in `lib/chain.ts`) until `NEXT_PUBLIC_CONTRACT_ADDRESS` is set. With it set, the lock is a real Sepolia transaction.
+- **CRE workflow:** `cre/decreta-docket/main.ts` runs through `cre workflow simulate --broadcast`. It is not deployed to a DON (deployment needs Chainlink approval).
 
 ## Try it in 60 seconds
 
@@ -72,12 +79,6 @@ The same release rule lives in three places that must stay in sync: `evaluateCon
 
 Remove `main.ts` and steps 5, 6 and 8 never change state.
 
-## Bounty table
-
-| Bounty | Prize | Slots | Required tech | Code file | DEMO step |
-| --- | --- | --- | --- | --- | --- |
-| General (no tracks verified) |  | null | none | `cre/decreta-docket/main.ts` | 8 |
-
 ## Trust model and limits
 
 - The data source is CourtListener, the Free Law Project's mirror of PACER that RECAP users and bulk imports keep current. A stale docket means the escrow waits. A missing date always reads as "not yet", so it never pays early on missing data.
@@ -95,7 +96,7 @@ Remove `main.ts` and steps 5, 6 and 8 never change state.
 - Chainlink CRE TypeScript SDK under Bun (`cre/decreta-docket/`), `cre workflow simulate --broadcast`
 - CourtListener REST API v4 (`/dockets/`)
 - Ethereum Sepolia (chain id 11155111)
-- Deployed contract: `<NEXT_PUBLIC_CONTRACT_ADDRESS>` on Sepolia, https://sepolia.etherscan.io/address/<address>. The app reads it from the env keys `NEXT_PUBLIC_CONTRACT_ADDRESS` (the address) and `SEPOLIA_RPC_URL` (the server-side RPC endpoint).
+- Deployed contract: `<NEXT_PUBLIC_CONTRACT_ADDRESS>` on Sepolia, https://sepolia.etherscan.io/address/<NEXT_PUBLIC_CONTRACT_ADDRESS>. The app reads it from the env keys `NEXT_PUBLIC_CONTRACT_ADDRESS` (the address) and `SEPOLIA_RPC_URL` (the server-side RPC endpoint).
 
 ## Quickstart
 
