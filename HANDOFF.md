@@ -8,6 +8,66 @@ REDEPLOY NEEDED: DecretaEscrow (Phase 5 bytecode change)
 6. Update the address line in `SECURITY.md` and README "Deployed contract" together (they must match byte for byte).
 7. Re-run `cre workflow simulate decreta-docket --target staging-settings --broadcast`.
 
+# Phase 8: editorial landing pass (2026-10-20)
+
+## Goal
+
+A judge opening https://decreta.vercel.app cold reaches DEMO step 1 (`/escrows`) with one click from the first viewport. The fixes stay inside L3 editorial: one CTA, one left edge, no ruled lines under text, no monospace, a stamp that fits, the trust copy open, and a hackathon link in the footer.
+
+## Status
+
+All five slices are written and nothing was cut. Nothing was built or run, because the agent had no shell.
+
+- Slice 1: `.farm-delta.md` has 10 Diagnosis items, 13 Changes rows and 1 Kept row, plus the final Grep counts.
+- Slice 2: `app/page.tsx` is rebuilt on a `max-w-5xl px-4` container.
+  - Five sections, each a `lg:grid-cols-[11rem_minmax(0,65ch)]` grid with a rust rail head: "Settlement escrow", "The problem", "The desk today", "Procedure", "Trust".
+  - The one filled CTA sits under the lede.
+  - The ruled texture is confined to the illustration frame.
+  - The compare link is inline text, field names are semibold spans, and the trust copy is two open `<section>`s with Fraunces h3s.
+  - `.decreta-margin` in `globals.css` draws the rust margin line at 64rem and up.
+- Slice 3: the mobile Menu toggle is now `Button variant="outline" size="sm"`. The footer has a third line linking DoraHacks, and the container moved from `space-y-2` to `space-y-3`. The two Phase 5 paragraphs are byte for byte unchanged.
+- Slice 4: the stamp is now `font-size="16" letter-spacing="2"`, and the third data bar is `width="150"`.
+- Slice 5: added one IDENTITY amendment line. The README now opens with an addresses table (live, video, contract plus Etherscan placeholder, source, hackathon). `.env.example` already listed all four required keys, so it is untouched.
+
+## Decisions
+
+- **Hero head below lg.** It stacks above the h1 as plain rust label text, not a chip. At lg it sits in the rail.
+- **The desk-today section renders only when the register reads.** The CTA moved to the hero, so this section now holds just the sentence. With no data it drops completely, so no bare border is left behind.
+- **The compare link** is in the side-by-side sentence, which renders only when that sentence's data guard passes. Otherwise `/escrows/compare` stays reachable from the nav ("Side by side").
+- **`decreta-ruled` is still used by the other routes' wrappers** (desk, record, compare, loading, error, not-found). This phase does not touch those layouts.
+- **`noopener` count is 10, not 8.** Phase 5 recorded 7 new-tab links, but the repo held 9 before this phase. Each one has `rel="noopener noreferrer"`.
+- **Trust text color.** The trust paragraphs moved from `text-muted-foreground` inside the closed details to the body ink at `text-lg`, to match the rest of the column. The words are unchanged.
+
+## Failed attempts
+
+None.
+
+## Files changed
+
+New: `.farm-delta.md`.
+
+Edited: `app/page.tsx`, `app/globals.css`, `app/layout.tsx`, `components/site-nav.tsx`, `public/illustrations/docket-sheet.svg`, `IDENTITY.md` (one amendment line), `README.md`, `HANDOFF.md`, `.farm-commits.json` (rewritten for this phase).
+
+Untouched: `lib/`, `contracts/`, `cre/`, `app/api/`, `scripts/`, `.env*`, `components/escrow-console.tsx` (LockTrustLine intact), `components/ui/*`.
+
+## Commands run
+
+None, no shell.
+
+## Open questions
+
+- **Unverified until the runner runs commands:**
+  - `npm run build`. Low risk: the only new import is `Button` in `site-nav.tsx`, and the Button props come from `React.ComponentProps<"button">`.
+  - Lighthouse at 360, 768 and 1280.
+  - The real fold height of the CTA on short phones (below about 700 px tall the lede may push it under the fold).
+- **Tailwind arbitrary class** `lg:grid-cols-[11rem_minmax(0,65ch)]` needs Tailwind v4 to emit it. Check it in the build CSS.
+
+## Next best step
+
+Phase 9 scene pass (hero scene and motion), then the REDEPLOY NEEDED list at the top of this file.
+
+---
+
 # Phase 5: security pass (2026-10-20)
 
 ## Goal
