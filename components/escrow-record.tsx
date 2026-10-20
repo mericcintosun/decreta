@@ -208,7 +208,7 @@ export function EscrowRecord({
               <div>
                 <dt className="decreta-label text-muted-foreground">Source</dt>
                 <dd>
-                  <a href={courtListenerUrl(docket.id)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                  <a href={courtListenerUrl(docket.id)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
                     CourtListener docket {docket.id}
                   </a>
                 </dd>
@@ -266,7 +266,7 @@ export function EscrowRecord({
               <p className="mt-1">{ev.note}</p>
               <p className="break-all text-sm text-muted-foreground" title={ev.txHash}>
                 {isLiveChain && !escrow.local && !/^0x0+$/.test(ev.txHash) ? (
-                  <a href={explorerTx(ev.txHash)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                  <a href={explorerTx(ev.txHash)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
                     {shortHex(ev.txHash)} on Etherscan
                   </a>
                 ) : (

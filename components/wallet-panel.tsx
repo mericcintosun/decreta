@@ -33,7 +33,7 @@ function Row({ tone, label, children, action }: { tone: Tone; label: string; chi
 
 function TxLink({ hash }: { hash: string }) {
   return isLiveChain ? (
-    <a href={explorerTx(hash)} target="_blank" rel="noreferrer" title={hash} className="break-all underline underline-offset-4">
+    <a href={explorerTx(hash)} target="_blank" rel="noopener noreferrer" title={hash} className="break-all underline underline-offset-4">
       {shortHex(hash)} on Etherscan
     </a>
   ) : (

@@ -90,7 +90,7 @@ function PairColumn({ side, id }: { side: PairSide; id: number }) {
           <p>{newest.note}</p>
           <p className="break-all text-muted-foreground" title={newest.txHash}>
             {linkable ? (
-              <a href={explorerTx(newest.txHash)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+              <a href={explorerTx(newest.txHash)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
                 {shortHex(newest.txHash)} on Etherscan
               </a>
             ) : (

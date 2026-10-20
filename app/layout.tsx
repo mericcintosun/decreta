@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Fraunces, Source_Sans_3 } from "next/font/google";
 import { SiteNav } from "@/components/site-nav";
+import { CHAIN_ID, CONTRACT_ADDRESS, EXPLORER_BASE } from "@/lib/config";
 import "./globals.css";
 
 const fraunces = Fraunces({ subsets: ["latin"], display: "swap", variable: "--font-fraunces" });
@@ -35,8 +36,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main>{children}</main>
         <footer className="border-t border-border">
-          <div className="mx-auto max-w-5xl px-4 py-8 text-sm text-muted-foreground">
-            Decreta reads public docket data from CourtListener (Free Law Project). Sepolia testnet only. Not legal advice.
+          <div className="mx-auto max-w-5xl space-y-2 px-4 py-8 text-sm text-muted-foreground">
+            <p>Decreta reads public docket data from CourtListener (Free Law Project). Sepolia testnet only. Not legal advice.</p>
+            <p>
+              {CONTRACT_ADDRESS ? (
+                <>
+                  Contract:{" "}
+                  <a
+                    href={`${EXPLORER_BASE}/address/${CONTRACT_ADDRESS}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all underline underline-offset-4"
+                  >
+                    {CONTRACT_ADDRESS}
+                  </a>{" "}
+                  on Sepolia (chain id {CHAIN_ID}).
+                </>
+              ) : (
+                "No contract is set on this deployment; locks are simulated."
+              )}{" "}
+              Source:{" "}
+              <a
+                href="https://github.com/mericcintosun/decreta"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all underline underline-offset-4"
+              >
+                github.com/mericcintosun/decreta
+              </a>
+            </p>
           </div>
         </footer>
       </body>
