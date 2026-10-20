@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200" role="img" aria-label="A strongbox shut with a rust clasp">
+  <rect width="320" height="200" fill="#ebe7d4"/>
+  <path d="M40 168h240" stroke="#cfc9b4" stroke-width="2"/>
+  <rect x="92" y="64" width="136" height="100" fill="#f5f2e6" stroke="#26311f" stroke-width="3"/>
+  <rect x="92" y="52" width="136" height="20" fill="#cfc9b4" stroke="#26311f" stroke-width="3"/>
+  <path d="M104 64v100M216 64v100" stroke="#26311f" stroke-width="1.5" opacity="0.5"/>
+  <path d="M92 116h136" stroke="#26311f" stroke-width="1.5" opacity="0.5"/>
+  <rect x="146" y="62" width="28" height="36" fill="#b4552d" stroke="#26311f" stroke-width="2"/>
+  <circle cx="160" cy="80" r="5" fill="#f5f2e6"/>
+  <path d="M160 84v8" stroke="#f5f2e6" stroke-width="3"/>
+  <circle cx="110" cy="152" r="3" fill="#26311f"/>
+  <circle cx="210" cy="152" r="3" fill="#26311f"/>
+  <circle cx="110" cy="76" r="3" fill="#26311f"/>
+  <circle cx="210" cy="76" r="3" fill="#26311f"/>
+  <rect x="100" y="164" width="16" height="6" fill="#26311f"/>
+  <rect x="204" y="164" width="16" height="6" fill="#26311f"/>
+</svg>

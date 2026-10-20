@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" width="320" height="200" role="img" aria-label="A sealed envelope leaving a ledger line toward a payee tab">
+  <rect width="320" height="200" fill="#ebe7d4"/>
+  <rect x="24" y="118" width="150" height="58" fill="#f5f2e6" stroke="#cfc9b4"/>
+  <path d="M24 138h150M24 158h150" stroke="#cfc9b4"/>
+  <path d="M44 118v58" stroke="#b4552d" stroke-width="1" opacity="0.6"/>
+  <rect x="54" y="126" width="70" height="5" fill="#26311f" opacity="0.7"/>
+  <rect x="54" y="146" width="96" height="5" fill="#26311f" opacity="0.7"/>
+  <rect x="54" y="166" width="58" height="4" fill="#26311f" opacity="0.4"/>
+  <path d="M120 130C150 96 190 74 226 70" fill="none" stroke="#c9932a" stroke-width="2" stroke-dasharray="4 6"/>
+  <g transform="rotate(-10 196 62)">
+    <rect x="160" y="40" width="72" height="46" fill="#f5f2e6" stroke="#26311f" stroke-width="2"/>
+    <path d="M160 40l36 26l36 -26" fill="none" stroke="#26311f" stroke-width="2"/>
+    <circle cx="196" cy="64" r="8" fill="#b4552d"/>
+  </g>
+  <rect x="250" y="40" width="46" height="120" fill="#f5f2e6" stroke="#26311f" stroke-width="2"/>
+  <rect x="250" y="40" width="46" height="18" fill="#b4552d"/>
+  <rect x="260" y="74" width="26" height="5" fill="#26311f" opacity="0.7"/>
+  <rect x="260" y="88" width="20" height="5" fill="#26311f" opacity="0.5"/>
+  <path d="M250 120h46M250 140h46" stroke="#cfc9b4"/>
+</svg>
