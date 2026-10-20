@@ -22,13 +22,13 @@ import {
 import { useEscrowLive } from "@/lib/use-escrow-live";
 import { cn } from "@/lib/utils";
 
-const STAMP_TEXT: Record<Escrow["status"], string> = {
+export const STAMP_TEXT: Record<Escrow["status"], string> = {
   locked: "Locked",
   released: "Released",
   refunded: "Refunded",
 };
 
-const STAMP_COLOR: Record<Escrow["status"], string> = {
+export const STAMP_COLOR: Record<Escrow["status"], string> = {
   locked: "text-ochre",
   released: "text-ok",
   refunded: "text-bad",
@@ -176,6 +176,14 @@ export function EscrowRecord({
           {escrow.deadline}, anyone can refund it to {escrow.onExpiry.label}.
         </p>
         <p className="max-w-prose text-muted-foreground">{escrow.memo}</p>
+        <p className="flex flex-wrap gap-x-6 text-sm">
+          <Link
+            href={`/escrows/compare?left=${escrow.id}`}
+            className="inline-flex min-h-11 items-center underline underline-offset-4"
+          >
+            Compare with the open docket
+          </Link>
+        </p>
       </header>
 
       <section aria-labelledby="docket-heading" className="space-y-4">
@@ -256,7 +264,7 @@ export function EscrowRecord({
                 {EVENT_LABEL[ev.kind]} · {stampTime(ev.at)}
               </p>
               <p className="mt-1">{ev.note}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="break-all text-sm text-muted-foreground" title={ev.txHash}>
                 {isLiveChain && !escrow.local && !/^0x0+$/.test(ev.txHash) ? (
                   <a href={explorerTx(ev.txHash)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
                     {shortHex(ev.txHash)} on Etherscan
