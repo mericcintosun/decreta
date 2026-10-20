@@ -1,6 +1,6 @@
 # Decreta
 
-Funds held on-chain that release by themselves when a real US federal court docket closes or records a new filing, checked by a Chainlink CRE workflow.
+Decreta is settlement escrow bound to a US federal court docket: the parties lock funds on-chain against a CourtListener docket, a Chainlink CRE workflow reads that docket on a schedule, and the money goes to the payee by itself once the court closes the case or files the agreed order, with a refund to the depositor if the deadline passes first.
 
 > Live demo: https://decreta.vercel.app
 > Video: <ADD_VIDEO_URL>
