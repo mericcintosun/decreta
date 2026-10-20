@@ -3,7 +3,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors",
+  "inline-flex items-center rounded-sm border px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.12em] transition-colors",
   {
     variants: {
       variant: {
@@ -11,6 +11,11 @@ const badgeVariants = cva(
         secondary: "border-transparent bg-secondary text-secondary-foreground",
         outline: "border-border text-foreground",
         destructive: "border-transparent bg-destructive text-destructive-foreground",
+        locked: "border-ochre bg-background text-foreground",
+        released: "border-transparent bg-ok text-primary-foreground",
+        refunded: "border-transparent bg-bad text-primary-foreground",
+        // Clerk's rubber stamp: double rule in the state color, slightly rotated.
+        stamp: "-rotate-[4deg] border-2 border-current bg-transparent px-3 py-1 text-sm tracking-[0.22em] outline outline-1 outline-offset-2 outline-current",
       },
     },
     defaultVariants: { variant: "default" },

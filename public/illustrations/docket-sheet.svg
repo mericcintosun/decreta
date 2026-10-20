@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 300" width="640" height="300" role="img" aria-label="A ruled docket sheet with a rust TERMINATED stamp and a released escrow ledger line">
+  <rect width="640" height="300" fill="#ebe7d4"/>
+  <g transform="rotate(-1.5 320 150)">
+    <rect x="70" y="26" width="500" height="250" fill="#f5f2e6" stroke="#cfc9b4"/>
+    <path d="M118 26v250" stroke="#b4552d" stroke-width="1" opacity="0.6"/>
+    <g stroke="#cfc9b4" stroke-width="1">
+      <path d="M70 74h500M70 104h500M70 134h500M70 164h500M70 194h500M70 224h500M70 254h500"/>
+    </g>
+    <g fill="#26311f">
+      <rect x="134" y="44" width="180" height="10"/>
+      <rect x="134" y="84" width="54" height="7" opacity="0.55"/>
+      <rect x="202" y="84" width="220" height="7" opacity="0.8"/>
+      <rect x="134" y="114" width="54" height="7" opacity="0.55"/>
+      <rect x="202" y="114" width="170" height="7" opacity="0.8"/>
+      <rect x="134" y="144" width="54" height="7" opacity="0.55"/>
+      <rect x="202" y="144" width="250" height="7" opacity="0.8"/>
+      <rect x="134" y="174" width="54" height="7" opacity="0.55"/>
+      <rect x="202" y="174" width="140" height="7" opacity="0.8"/>
+    </g>
+    <g fill="#2e7d4f">
+      <rect x="134" y="234" width="54" height="7"/>
+      <rect x="202" y="234" width="196" height="7"/>
+    </g>
+    <g transform="rotate(-8 470 150)" fill="none" stroke="#b4552d">
+      <rect x="380" y="122" width="180" height="58" stroke-width="3"/>
+      <rect x="386" y="128" width="168" height="46" stroke-width="1"/>
+      <text x="470" y="158" fill="#b4552d" stroke="none" font-family="Georgia, serif" font-size="20" font-weight="700" letter-spacing="4" text-anchor="middle">TERMINATED</text>
+    </g>
+    <circle cx="520" cy="58" r="16" fill="none" stroke="#c9932a" stroke-width="2"/>
+    <path d="M512 58l6 6 10-12" fill="none" stroke="#c9932a" stroke-width="2"/>
+  </g>
+</svg>

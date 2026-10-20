@@ -1,31 +1,38 @@
 @import "tailwindcss";
 
-/* shadcn-style design tokens. The ONLY place colors live: restyle a project by
-   editing these variables from IDENTITY.md; components never carry hex.
-   TEMPLATE placeholder palette: warm neutral, deliberately NOT the navy ground +
-   teal accent the scaffold rules ban, so a token the scaffold forgets to
-   rewrite cannot reintroduce that look. Every value below is replaced. */
+/* Design tokens. Every hex here comes from IDENTITY.md (D6 fieldbook).
+   Components never carry raw hex; they use these variables through Tailwind. */
 :root {
-  --background: oklch(0.985 0.004 80);
-  --foreground: oklch(0.2 0.01 60);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.2 0.01 60);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.01 60);
-  --primary: oklch(0.45 0.12 40);
-  --primary-foreground: oklch(0.98 0.005 80);
-  --secondary: oklch(0.94 0.008 80);
-  --secondary-foreground: oklch(0.25 0.01 60);
-  --muted: oklch(0.94 0.008 80);
-  --muted-foreground: oklch(0.5 0.01 60);
-  --accent: oklch(0.92 0.02 60);
-  --accent-foreground: oklch(0.2 0.01 60);
-  --destructive: oklch(0.55 0.19 25);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.88 0.01 80);
-  --input: oklch(0.88 0.01 80);
-  --ring: oklch(0.45 0.12 40);
-  --radius: 0.375rem;
+  --paper: #f5f2e6;
+  --paper-2: #ebe7d4;
+  --rule: #cfc9b4;
+  --ink: #26311f;
+  --rust: #b4552d;
+  --ochre: #c9932a;
+  --ok: #2e7d4f;
+  --warn: #c9932a;
+  --bad: #9c3b2a;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--paper);
+  --popover-foreground: var(--ink);
+  --primary: var(--rust);
+  --primary-foreground: var(--paper);
+  --secondary: var(--paper-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--paper-2);
+  --muted-foreground: color-mix(in oklab, var(--ink) 72%, var(--paper));
+  --accent: var(--paper-2);
+  --accent-foreground: var(--ink);
+  --destructive: var(--bad);
+  --destructive-foreground: var(--paper);
+  --border: var(--rule);
+  --input: var(--rule);
+  --ring: var(--rust);
+  --radius: 0.125rem;
 }
 
 @theme inline {
@@ -48,13 +55,93 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  --color-ochre: var(--ochre);
+  --color-ok: var(--ok);
+  --color-warn: var(--warn);
+  --color-bad: var(--bad);
+  --radius-sm: 0.0625rem;
+  --radius-md: 0.125rem;
+  --radius-lg: 0.125rem;
+  --radius-xl: 0.125rem;
+  --font-display: var(--font-fraunces), "Iowan Old Style", Georgia, serif;
+  --font-sans: var(--font-source-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+h1,
+h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Field-guide label: small caps with wide tracking, used for kickers and column heads. */
+.decreta-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+/* Ruled paper behind the article column, like a docket sheet. */
+.decreta-ruled {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 31px,
+    color-mix(in oklab, var(--rule) 45%, transparent) 31px,
+    color-mix(in oklab, var(--rule) 45%, transparent) 32px
+  );
+}
+
+/* M1 RISE, the one motion signature of this project. */
+@keyframes decreta-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes decreta-stamp {
+  from {
+    opacity: 0;
+    transform: translateY(18px) rotate(-4deg);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) rotate(-4deg);
+  }
+}
+
+.decreta-rise {
+  animation: decreta-rise 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.decreta-seq > * {
+  animation: decreta-rise 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.decreta-seq > *:nth-child(2) { animation-delay: 70ms; }
+.decreta-seq > *:nth-child(3) { animation-delay: 140ms; }
+.decreta-seq > *:nth-child(4) { animation-delay: 210ms; }
+.decreta-seq > *:nth-child(5) { animation-delay: 280ms; }
+.decreta-seq > *:nth-child(n + 6) { animation-delay: 350ms; }
+
+.decreta-stamp-in {
+  animation: decreta-stamp 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decreta-rise,
+  .decreta-seq > *,
+  .decreta-stamp-in {
+    animation: none !important;
+  }
 }
