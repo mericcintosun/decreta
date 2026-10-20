@@ -1,22 +1,13 @@
-import {
-  createPublicClient,
-  createWalletClient,
-  custom,
-  http,
-  parseEther,
-  parseEventLogs,
-  type Address,
-  type EIP1193Provider,
-} from "viem";
+import { createWalletClient, custom, parseEther, type Address, type EIP1193Provider } from "viem";
 import { sepolia } from "viem/chains";
-import { CHAIN_ID, CONTRACT_ADDRESS, EXPLORER_BASE, RETRY_COUNT, RPC_TIMEOUT_MS } from "@/lib/config";
-import { mockTxHash, type ConditionKind, type EscrowStatus, type Hex } from "@/lib/data";
+import { CHAIN_ID, CONTRACT_ADDRESS, EXPLORER_BASE } from "@/lib/config";
+import { mockTxHash, type ApiResult, type ConditionKind, type Hex } from "@/lib/data";
 import { escrowAbi } from "@/lib/escrow-abi";
 
-// DecretaEscrow from the browser. Same functions, two paths:
-//   1. NEXT_PUBLIC_CONTRACT_ADDRESS set: real Sepolia calls through viem
-//      (wallet via window.ethereum, reads via the public RPC).
-//   2. not set: mock receipts so the UI flow works with zero setup.
+// DecretaEscrow writes from the browser. Same function, two paths:
+//   1. NEXT_PUBLIC_CONTRACT_ADDRESS set: sendLock signs createEscrow in the
+//      browser wallet, then /api/escrows/confirm reads the receipt on the server.
+//   2. not set: a mock receipt so the UI flow works with zero setup.
 // Server-side reads with the keyed RPC live in lib/escrow-chain.ts.
 
 export { escrowAbi };
@@ -24,10 +15,9 @@ export const contractAddress: Address | null = CONTRACT_ADDRESS;
 export const chainId = CHAIN_ID;
 export const isLiveChain = contractAddress !== null && chainId === sepolia.id;
 
-const publicClient = createPublicClient({
-  chain: sepolia,
-  transport: http(undefined, { timeout: RPC_TIMEOUT_MS, retryCount: RETRY_COUNT }),
-});
+/** How often and how long the client asks the server whether the lock is mined. */
+const CONFIRM_POLL_MS = 3000;
+const CONFIRM_ATTEMPTS = 40;
 
 export function explorerTx(hash: string): string {
   return `${EXPLORER_BASE}/tx/${hash}`;
@@ -53,30 +43,22 @@ export interface LockReceipt {
   txHash: Hex;
 }
 
-function injectedProvider(): EIP1193Provider | null {
+export function injectedProvider(): EIP1193Provider | null {
   if (typeof window === "undefined") return null;
   return (window as unknown as { ethereum?: EIP1193Provider }).ethereum ?? null;
 }
 
-export async function lockFunds(input: LockInput, nextMockId: number): Promise<LockReceipt> {
-  if (!isLiveChain || !contractAddress) {
-    // Mock path: no contract configured. Pretend the tx confirmed.
-    await new Promise((r) => setTimeout(r, 900));
-    return { mode: "mock", escrowId: nextMockId, txHash: mockTxHash(`lock-${nextMockId}-${Date.now()}`) };
-  }
-
+/** Signs createEscrow in the connected wallet and returns the hash. Does not wait for mining. */
+export async function sendLock(input: LockInput): Promise<Hex> {
+  if (!contractAddress) throw new Error("No contract address is set");
   const provider = injectedProvider();
-  if (!provider) throw new Error("No browser wallet found. Install a wallet and switch it to Sepolia.");
+  if (!provider) throw new Error("No browser wallet found. Install a wallet and switch it to Sepolia");
 
   const wallet = createWalletClient({ chain: sepolia, transport: custom(provider) });
-  const [account] = await wallet.requestAddresses();
-  try {
-    await wallet.switchChain({ id: sepolia.id });
-  } catch {
-    // Some wallets refuse programmatic switching; writeContract checks the chain anyway.
-  }
+  const [account] = await wallet.getAddresses();
+  if (!account) throw new Error("The wallet is not connected");
 
-  const txHash = await wallet.writeContract({
+  return wallet.writeContract({
     account,
     address: contractAddress,
     abi: escrowAbi,
@@ -91,27 +73,40 @@ export async function lockFunds(input: LockInput, nextMockId: number): Promise<L
     ],
     value: parseEther(input.amountEth),
   });
-
-  const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
-  const [deposited] = parseEventLogs({ abi: escrowAbi, logs: receipt.logs, eventName: "Deposited" });
-  if (!deposited) throw new Error("Transaction confirmed but no Deposited event was found.");
-  return { mode: "chain", escrowId: Number(deposited.args.id), txHash };
 }
 
-const STATUS_CODES: Record<number, EscrowStatus> = { 1: "locked", 2: "released", 3: "refunded" };
-
-/** Reads the on-chain status. Returns null on the mock path or for unknown ids. */
-export async function readEscrowStatus(id: number): Promise<EscrowStatus | null> {
-  if (!isLiveChain || !contractAddress) return null;
-  try {
-    const escrow = await publicClient.readContract({
-      address: contractAddress,
-      abi: escrowAbi,
-      functionName: "getEscrow",
-      args: [BigInt(id)],
+/** Asks the server for the Deposited id of a sent lock until the receipt is mined. */
+async function confirmLock(txHash: Hex): Promise<number> {
+  for (let attempt = 0; attempt < CONFIRM_ATTEMPTS; attempt++) {
+    const res = await fetch("/api/escrows/confirm", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ txHash }),
+      cache: "no-store",
     });
-    return STATUS_CODES[escrow.status] ?? null;
-  } catch {
-    return null;
+    const body = (await res.json()) as ApiResult<{ escrowId: number; txHash: Hex }>;
+    if (body.ok) return body.data.escrowId;
+    if (body.error !== "not_found") throw new Error(body.hint);
+    await new Promise((r) => setTimeout(r, CONFIRM_POLL_MS));
   }
+  throw new Error("The transaction was sent but is not mined after two minutes. Check it on Etherscan");
+}
+
+export async function lockFunds(
+  input: LockInput,
+  nextMockId: number,
+  hooks: { onSent?: (txHash: Hex) => void } = {}
+): Promise<LockReceipt> {
+  if (!isLiveChain) {
+    // Mock path (DEMO step 3 fallback): no contract configured. Pretend the tx confirmed.
+    const txHash = mockTxHash(`lock-${nextMockId}-${Date.now()}`);
+    hooks.onSent?.(txHash);
+    await new Promise((r) => setTimeout(r, 900));
+    return { mode: "mock", escrowId: nextMockId, txHash };
+  }
+
+  const txHash = await sendLock(input);
+  hooks.onSent?.(txHash);
+  const escrowId = await confirmLock(txHash);
+  return { mode: "chain", escrowId, txHash };
 }

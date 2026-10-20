@@ -1,15 +1,20 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { isAddress } from "viem";
+import { EmptyState, ErrorState } from "@/components/state-triad";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { WalletPanel } from "@/components/wallet-panel";
 import { explorerTx, isLiveChain, lockFunds } from "@/lib/chain";
+import { DEMO_PLAINTIFF } from "@/lib/config";
 import type { ErrorCode } from "@/lib/errors";
+import { useWallet } from "@/lib/use-wallet";
+import { canSend } from "@/lib/wallet-state";
 import {
   conditionSentence,
   courtListenerUrl,
@@ -46,6 +51,38 @@ const FILTERS: { key: Filter; label: string }[] = [
 
 const fieldLabel = "decreta-label mb-1.5 block text-muted-foreground";
 
+/** The closed demo docket; the empty register offers to read it. */
+const CLOSED_DOCKET = "68519034";
+
+/** The register could not be read on the server. Retries the server render. */
+export function RegisterErrorState({ hint }: { hint: string }) {
+  const router = useRouter();
+  return <ErrorState title="The register could not be read" hint={hint} onRetry={() => router.refresh()} />;
+}
+
+function DocketErrorState({ message, code, onRetry }: { message: string; code?: ErrorCode; onRetry: () => void }) {
+  return <ErrorState title="The docket could not be read" hint={message} code={code} onRetry={onRetry} retryLabel="Read again" />;
+}
+
+function RegisterEmptyState({ onRead, onShowAll }: { onRead: () => void; onShowAll: () => void }) {
+  return (
+    <EmptyState
+      title="No escrows with this status."
+      body="Start one: read the closed demo docket and lock against it."
+      action={
+        <>
+          <Button size="sm" onClick={onRead}>
+            Read docket {CLOSED_DOCKET}
+          </Button>
+          <Button variant="outline" size="sm" onClick={onShowAll}>
+            Show all
+          </Button>
+        </>
+      }
+    />
+  );
+}
+
 export function EscrowConsole({
   seedEscrows,
   seedDockets,
@@ -60,18 +97,24 @@ export function EscrowConsole({
   const [condition, setCondition] = useState<ConditionKind>("terminated");
   const [filedAfter, setFiledAfter] = useState("2026-10-20");
   const [amount, setAmount] = useState("0.01");
-  const [onMet, setOnMet] = useState<string>(isLiveChain ? "" : mockAddress("demo plaintiff"));
+  const [onMet, setOnMet] = useState<string>(isLiveChain ? (DEMO_PLAINTIFF ?? "") : mockAddress("demo plaintiff"));
   const [onExpiry, setOnExpiry] = useState<string>(isLiveChain ? "" : mockAddress("demo defendant"));
   const [deadline, setDeadline] = useState("2027-04-30");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState<{ escrow: Escrow; mode: "chain" | "mock" } | null>(null);
   const [localEscrows, setLocalEscrows] = useState<Escrow[]>([]);
   const [filter, setFilter] = useState<Filter>("all");
+  const wallet = useWallet();
+  const { state } = wallet;
+  const account = "account" in state && isLiveChain ? state.account : null;
 
   useEffect(() => {
     setLocalEscrows(loadLocalEscrows());
   }, []);
+
+  // Live path: the refund address defaults to the wallet that deposits.
+  useEffect(() => {
+    if (account) setOnExpiry((prev) => prev || account);
+  }, [account]);
 
   const allEscrows = useMemo(() => [...localEscrows, ...seedEscrows], [localEscrows, seedEscrows]);
   const docketById = useMemo(() => new Map(seedDockets.map((d) => [d.id, d])), [seedDockets]);
@@ -101,13 +144,13 @@ export function EscrowConsole({
   const amountOk = Number(amount) > 0;
   const addressesOk = isAddress(onMet) && isAddress(onExpiry);
   const datesOk = deadline > "2026-10-20" && (condition === "terminated" || Boolean(filedAfter));
-  const canLock = Boolean(docket) && amountOk && addressesOk && datesOk && !submitting;
+  const canLock = Boolean(docket) && amountOk && addressesOk && datesOk && canSend(state);
+  const busy = state.status === "tx-pending" || state.status === "connecting";
   const precheck = docket ? evaluateCondition({ condition, filedAfter }, docket) : null;
 
   async function submit() {
-    if (!docket) return;
-    setSubmitting(true);
-    setSubmitError(null);
+    if (!docket || !canSend(state)) return;
+    wallet.startTx();
     try {
       const nextId = Math.max(100, ...allEscrows.map((e) => e.id)) + 1;
       const receipt = await lockFunds(
@@ -120,7 +163,8 @@ export function EscrowConsole({
           onMet: onMet as Hex,
           onExpiry: onExpiry as Hex,
         },
-        nextId
+        nextId,
+        { onSent: wallet.txSent }
       );
       const escrow: Escrow = {
         id: receipt.escrowId,
@@ -147,10 +191,10 @@ export function EscrowConsole({
       if (receipt.mode === "mock") saveLocalEscrow(escrow);
       setLocalEscrows((prev) => [escrow, ...prev.filter((e) => e.id !== escrow.id)]);
       setConfirmed({ escrow, mode: receipt.mode });
+      // On the live path this runs only after /api/escrows/confirm answered ok.
+      wallet.txConfirmed(receipt.txHash, receipt.escrowId);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "The transaction did not go through.");
-    } finally {
-      setSubmitting(false);
+      wallet.txError(err);
     }
   }
 
@@ -225,20 +269,7 @@ export function EscrowConsole({
               </div>
             )}
             {preview.state === "error" && (
-              <div
-                role="alert"
-                className={cn(
-                  "flex flex-wrap items-center gap-3 border-l-4 bg-secondary p-4 text-sm",
-                  preview.code === "not_configured" ? "border-ochre" : "border-bad"
-                )}
-              >
-                {preview.code && (
-                  <Badge variant={preview.code === "not_configured" ? "locked" : "refunded"}>
-                    {preview.code.replaceAll("_", " ")}
-                  </Badge>
-                )}
-                <span>{preview.message}</span>
-              </div>
+              <DocketErrorState message={preview.message} code={preview.code} onRetry={() => void lookup(docketInput)} />
             )}
             {docket && preview.state === "ready" && (
               <div className="decreta-rise border-l-4 border-primary bg-secondary p-4">
@@ -327,16 +358,21 @@ export function EscrowConsole({
               <p className="text-sm text-bad">Both wallets must be valid 0x addresses.</p>
             )}
 
-            <div className="flex flex-wrap items-center gap-4 border-t border-border pt-6">
-              <Button size="lg" disabled={!canLock} onClick={submit}>
-                {submitting ? "Locking…" : `Lock ${amountOk ? amount : ""} ETH`}
-              </Button>
-              {!docket && <span className="text-sm text-muted-foreground">Read a docket first.</span>}
-              {submitError && (
-                <span role="alert" className="text-sm text-bad">
-                  {submitError}
-                </span>
-              )}
+            <div className="space-y-4 border-t border-border pt-6">
+              <WalletPanel wallet={wallet} />
+              <div className="flex flex-wrap items-center gap-4">
+                <Button
+                  size="lg"
+                  disabled={state.status === "tx-pending" || state.status === "connecting" || !canLock}
+                  onClick={submit}
+                >
+                  {state.status === "tx-pending" ? "Locking…" : `Lock ${amountOk ? amount : ""} ETH`}
+                </Button>
+                {!docket && <span className="text-sm text-muted-foreground">Read a docket first.</span>}
+                {docket && !busy && !canSend(state) && (
+                  <span className="text-sm text-muted-foreground">Connect the wallet on Sepolia first.</span>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -390,22 +426,14 @@ export function EscrowConsole({
         </div>
 
         {visible.length === 0 ? (
-          <Card className="text-center">
-            <CardContent className="space-y-3 pt-6">
-              <Image
-                src="/illustrations/docket-sheet.svg"
-                alt="A ruled docket sheet with a rust TERMINATED stamp"
-                width={320}
-                height={150}
-                className="mx-auto opacity-70"
-                unoptimized
-              />
-              <p className="font-display text-lg">No escrows with this status.</p>
-              <Button variant="outline" size="sm" onClick={() => setFilter("all")}>
-                Show all
-              </Button>
-            </CardContent>
-          </Card>
+          <RegisterEmptyState
+            onRead={() => {
+              setDocketInput(CLOSED_DOCKET);
+              void lookup(CLOSED_DOCKET);
+              document.getElementById("open-escrow")?.scrollIntoView({ behavior: "smooth" });
+            }}
+            onShowAll={() => setFilter("all")}
+          />
         ) : (
           <ul className="decreta-seq divide-y divide-border border-y border-border">
             {visible.map((e) => {

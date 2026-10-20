@@ -22,6 +22,14 @@ export const escrowListQuery = z.object({
   status: z.enum(["locked", "released", "refunded"]).optional(),
 });
 
+/** Body of POST /api/escrows/confirm: the createEscrow transaction hash. */
+export const confirmLockBody = z.object({
+  txHash: z
+    .string()
+    .regex(/^0x[0-9a-fA-F]{64}$/)
+    .transform((v) => v.toLowerCase() as Hex),
+});
+
 /** The 9 fields lib/courtlistener.ts asks for with ?fields=. */
 export const courtListenerDocketSchema = z.object({
   id: z.number().int(),
