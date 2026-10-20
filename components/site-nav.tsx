@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const LINKS = [
@@ -20,18 +21,13 @@ export function SiteNav() {
 
   return (
     <nav aria-label="Primary" className="text-sm">
-      <button
-        type="button"
-        className={cn(
-          "inline-flex min-h-11 min-w-11 items-center justify-center border border-border px-3 font-semibold md:hidden",
-          focusRing
-        )}
+      <Button variant="outline" size="sm" className="md:hidden" type="button"
         aria-expanded={open}
         aria-controls="primary-menu"
         onClick={() => setOpen((v) => !v)}
       >
         Menu
-      </button>
+      </Button>
 
       <ul className="hidden items-center gap-x-6 md:flex">
         {LINKS.map((link) => {

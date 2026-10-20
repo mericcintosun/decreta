@@ -36,7 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </header>
         <main>{children}</main>
         <footer className="border-t border-border">
-          <div className="mx-auto max-w-5xl space-y-2 px-4 py-8 text-sm text-muted-foreground">
+          <div className="mx-auto max-w-5xl space-y-3 px-4 py-8 text-sm text-muted-foreground">
             <p>Decreta reads public docket data from CourtListener (Free Law Project). Sepolia testnet only. Not legal advice.</p>
             <p>
               {CONTRACT_ADDRESS ? (
@@ -63,6 +63,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 className="break-all underline underline-offset-4"
               >
                 github.com/mericcintosun/decreta
+              </a>
+            </p>
+            <p>
+              Built for BLI Legal Tech Hackathon 2:{" "}
+              <a
+                href="https://dorahacks.io/hackathon/legal-hack-2026"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="break-all underline underline-offset-4"
+              >
+                dorahacks.io/hackathon/legal-hack-2026
               </a>
             </p>
           </div>
