@@ -44,13 +44,17 @@ contract DecretaEscrow is IReceiver, IERC165 {
     address public owner;
     address public forwarder;
     uint256 public escrowCount;
+    bool public paused;
     mapping(uint256 => Escrow) private escrows;
+    /// 1 = not entered, 2 = entered. Hand-rolled guard, no external library.
+    uint256 private _entered = 1;
 
     event Deposited(uint256 indexed id, uint64 indexed docketId, address depositor, uint256 amount, Condition condition);
     event Checked(uint256 indexed id, bool conditionMet, uint64 observedAt);
     event Released(uint256 indexed id, address indexed to, uint256 amount);
     event Refunded(uint256 indexed id, address indexed to, uint256 amount);
     event ForwarderUpdated(address forwarder);
+    event PausedSet(bool paused);
 
     error NotForwarder();
     error NotOwner();
@@ -58,6 +62,15 @@ contract DecretaEscrow is IReceiver, IERC165 {
     error InvalidEscrow();
     error DeadlineNotReached();
     error TransferFailed();
+    error Paused();
+    error Reentrancy();
+
+    modifier nonReentrant() {
+        if (_entered == 2) revert Reentrancy();
+        _entered = 2;
+        _;
+        _entered = 1;
+    }
 
     constructor(address forwarder_) {
         owner = msg.sender;
@@ -66,6 +79,7 @@ contract DecretaEscrow is IReceiver, IERC165 {
     }
 
     /// @notice Lock msg.value against a docket.
+    // Open: anyone may lock their own ETH.
     function createEscrow(
         uint64 docketId,
         Condition condition,
@@ -74,6 +88,7 @@ contract DecretaEscrow is IReceiver, IERC165 {
         address onMet,
         address onExpiry
     ) external payable returns (uint256 id) {
+        if (paused) revert Paused();
         if (msg.value == 0 || docketId == 0 || onMet == address(0) || onExpiry == address(0)) revert InvalidEscrow();
         if (deadline <= block.timestamp) revert InvalidEscrow();
         if (condition == Condition.FilingAfter && filedAfter == 0) revert InvalidEscrow();
@@ -94,7 +109,7 @@ contract DecretaEscrow is IReceiver, IERC165 {
     }
 
     /// @notice CRE entry point. report = abi.encode(uint256 escrowId, bool met, uint64 observedAt).
-    function onReport(bytes calldata, bytes calldata report) external override {
+    function onReport(bytes calldata, bytes calldata report) external override nonReentrant {
         if (msg.sender != forwarder) revert NotForwarder();
         (uint256 id, bool met, uint64 observedAt) = abi.decode(report, (uint256, bool, uint64));
 
@@ -111,7 +126,8 @@ contract DecretaEscrow is IReceiver, IERC165 {
     }
 
     /// @notice Anyone may return the funds once the deadline passes without the condition being met.
-    function refundAfterDeadline(uint256 id) external {
+    // Open: a stranger can only send funds to the fixed onExpiry, after the deadline.
+    function refundAfterDeadline(uint256 id) external nonReentrant {
         Escrow storage e = escrows[id];
         if (e.status != Status.Locked) revert NotLocked();
         if (block.timestamp <= e.deadline) revert DeadlineNotReached();
@@ -129,8 +145,16 @@ contract DecretaEscrow is IReceiver, IERC165 {
 
     function setForwarder(address forwarder_) external {
         if (msg.sender != owner) revert NotOwner();
+        if (forwarder_ == address(0)) revert InvalidEscrow();
         forwarder = forwarder_;
         emit ForwarderUpdated(forwarder_);
+    }
+
+    // Testnet escape hatch: stops new locks; releases and refunds always run so a pause can never trap funds.
+    function setPaused(bool paused_) external {
+        if (msg.sender != owner) revert NotOwner();
+        paused = paused_;
+        emit PausedSet(paused_);
     }
 
     function supportsInterface(bytes4 interfaceId) external pure override returns (bool) {

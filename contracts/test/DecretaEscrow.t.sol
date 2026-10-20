@@ -139,4 +139,81 @@ contract DecretaEscrowTest {
         require(PLAINTIFF.balance - before == uint256(amount), "payee got exactly the amount");
         require(address(escrow).balance == 0, "contract emptied");
     }
+
+    function test_reentrantPayeeCannotReenterRefund() public {
+        ReentrantPayee payee = new ReentrantPayee(escrow);
+        // A pays the helper on met; B expires soon and refunds to DEFENDANT.
+        uint256 a = escrow.createEscrow{value: AMOUNT}(
+            DOCKET, DecretaEscrow.Condition.Terminated, 0, deadline, address(payee), DEFENDANT
+        );
+        uint64 shortDeadline = uint64(block.timestamp + 1 days);
+        uint256 b = escrow.createEscrow{value: AMOUNT}(
+            DOCKET, DecretaEscrow.Condition.Terminated, 0, shortDeadline, PLAINTIFF, DEFENDANT
+        );
+        payee.setTarget(b);
+
+        vm.warp(uint256(shortDeadline) + 1);
+        vm.prank(FORWARDER);
+        escrow.onReport("", _report(a, true));
+
+        require(payee.blocked(), "reentry blocked");
+        require(escrow.getEscrow(b).status == DecretaEscrow.Status.Locked, "B still locked");
+        require(address(payee).balance == AMOUNT, "helper paid exactly AMOUNT");
+        require(DEFENDANT.balance == 0, "no refund during reentry");
+    }
+
+    function test_pauseBlocksNewLocksOnly() public {
+        uint256 id = _lock();
+        escrow.setPaused(true);
+        require(escrow.paused(), "paused");
+
+        vm.expectRevert(DecretaEscrow.Paused.selector);
+        escrow.createEscrow{value: AMOUNT}(DOCKET, DecretaEscrow.Condition.Terminated, 0, deadline, PLAINTIFF, DEFENDANT);
+
+        vm.prank(FORWARDER);
+        escrow.onReport("", _report(id, true));
+        require(escrow.getEscrow(id).status == DecretaEscrow.Status.Released, "release still runs");
+        require(PLAINTIFF.balance == AMOUNT, "payee paid while paused");
+    }
+
+    function test_setPausedOwnerOnly() public {
+        vm.prank(address(0xBAD));
+        vm.expectRevert(DecretaEscrow.NotOwner.selector);
+        escrow.setPaused(true);
+        require(!escrow.paused(), "stranger cannot pause");
+
+        escrow.setPaused(true);
+        require(escrow.paused(), "owner can pause");
+    }
+
+    function test_setForwarderRejectsZero() public {
+        vm.prank(address(0xBAD));
+        vm.expectRevert(DecretaEscrow.NotOwner.selector);
+        escrow.setForwarder(address(0xCAFE));
+
+        vm.expectRevert(DecretaEscrow.InvalidEscrow.selector);
+        escrow.setForwarder(address(0));
+        require(escrow.forwarder() == FORWARDER, "forwarder unchanged");
+    }
+}
+
+/// A contract payee that tries to re-enter refundAfterDeadline when paid.
+contract ReentrantPayee {
+    DecretaEscrow immutable escrow;
+    uint256 public target;
+    bool public blocked;
+
+    constructor(DecretaEscrow escrow_) {
+        escrow = escrow_;
+    }
+
+    function setTarget(uint256 id) external {
+        target = id;
+    }
+
+    receive() external payable {
+        try escrow.refundAfterDeadline(target) {} catch {
+            blocked = true;
+        }
+    }
 }
