@@ -33,11 +33,21 @@ function Row({ tone, label, children, action }: { tone: Tone; label: string; chi
 
 function TxLink({ hash }: { hash: string }) {
   return isLiveChain ? (
-    <a href={explorerTx(hash)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+    <a href={explorerTx(hash)} target="_blank" rel="noreferrer" title={hash} className="break-all underline underline-offset-4">
       {shortHex(hash)} on Etherscan
     </a>
   ) : (
-    <>receipt {shortHex(hash)}</>
+    <span className="break-all" title={hash}>
+      receipt {shortHex(hash)}
+    </span>
+  );
+}
+
+function Addr({ value }: { value: string }) {
+  return (
+    <span className="break-all" title={value}>
+      {shortHex(value)}
+    </span>
   );
 }
 
@@ -79,16 +89,22 @@ export function WalletPanel({ wallet }: { wallet: UseWallet }) {
           label="Wrong network"
           action={<Button onClick={() => void wallet.switchNetwork()}>Switch to Sepolia</Button>}
         >
-          {shortHex(state.account)} is on chain {state.chainId}. Decreta locks funds on Sepolia only.
+          <Addr value={state.account} /> is on chain {state.chainId}. Decreta locks funds on Sepolia only.
         </Row>
       );
 
     case "idle":
       return (
         <Row tone="neutral" label={state.simulated ? "Simulated wallet" : "Wallet on Sepolia"}>
-          {state.simulated
-            ? `Depositor ${shortHex(state.account)}. No contract is set, so nothing leaves this browser.`
-            : `Connected as ${shortHex(state.account)}. Ready to lock.`}
+          {state.simulated ? (
+            <>
+              Depositor <Addr value={state.account} />. No contract is set, so nothing leaves this browser.
+            </>
+          ) : (
+            <>
+              Connected as <Addr value={state.account} />. Ready to lock.
+            </>
+          )}
         </Row>
       );
 

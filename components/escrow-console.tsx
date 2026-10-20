@@ -222,6 +222,7 @@ export function EscrowConsole({
               <div className="flex gap-2">
                 <Input
                   id="docket"
+                  className="min-w-0"
                   value={docketInput}
                   placeholder="https://www.courtlistener.com/docket/68519034/"
                   onChange={(e) => setDocketInput(e.target.value)}
@@ -388,7 +389,9 @@ export function EscrowConsole({
                     Deposited event on Etherscan
                   </a>
                 ) : (
-                  <>Simulated receipt {shortHex(confirmed.escrow.events[0].txHash)}.</>
+                  <span className="break-all" title={confirmed.escrow.events[0].txHash}>
+                    Simulated receipt {shortHex(confirmed.escrow.events[0].txHash)}.
+                  </span>
                 )}
               </CardDescription>
             </CardHeader>
