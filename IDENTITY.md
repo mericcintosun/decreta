@@ -28,3 +28,4 @@ Domain words: docket, clerk's stamp, escrow; texture: archival. A court docket i
 
 2026-10-20: app/opengraph-image.tsx keeps five token hexes because ImageResponse cannot read CSS variables; values equal the block above.
 2026-10-20: landing ruled paper confined to the figure frame; a rust docket margin line carries the fieldbook texture beside the L3 column.
+2026-10-20: landing sections rise in on scroll with the same decreta-rise keyframe on a view() timeline (.decreta-entrance), only under supports and prefers-reduced-motion no-preference; five scene slots (hero plus four procedure plates) show public/brand/scene-N.png when present and fieldbook SVG plates in the six paper, ink, rust and ochre values otherwise.

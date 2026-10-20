@@ -1,6 +1,6 @@
 # Decreta
 
-Decreta is settlement escrow bound to a US federal court docket: the parties lock funds on-chain against a CourtListener docket, a Chainlink CRE workflow reads that docket on a schedule, and the money goes to the payee by itself once the court closes the case or files the agreed order, with a refund to the depositor if the deadline passes first.
+Decreta is settlement escrow bound to a US federal court docket: the parties lock funds on-chain against a CourtListener docket, and a Chainlink CRE workflow pays the payee by itself once the court closes the case or files the agreed order, with a refund to the depositor if the deadline passes first. Today that last step waits on a person who has to notice the dismissal on PACER and wire the money, and Decreta lets the court the parties are already in be the trigger.
 
 | Address | Link |
 | --- | --- |
@@ -9,6 +9,15 @@ Decreta is settlement escrow bound to a US federal court docket: the parties loc
 | Contract (Sepolia) | `<NEXT_PUBLIC_CONTRACT_ADDRESS>`, https://sepolia.etherscan.io/address/<address> (placeholder until the Phase 5 redeploy) |
 | Source | https://github.com/mericcintosun/decreta |
 | Hackathon | BLI Legal Tech Hackathon 2, https://dorahacks.io/hackathon/legal-hack-2026 (track: General, no tracks verified) |
+
+## Try it in 60 seconds
+
+1. Open https://decreta.vercel.app and press **Open the escrow desk** (DEMO step 1, `/escrows`).
+2. Paste docket `68519034` (or `https://www.courtlistener.com/docket/68519034/`). The case name, court and a Terminated badge appear.
+3. Lock the default amount and open the record. Press **Check the docket now**: the record stamps RELEASED to the plaintiff.
+4. Open `/escrows/compare` (nav "Side by side"): the closed-docket escrow reads RELEASED while the open-docket escrow on 69102877 stays LOCKED.
+
+With no contract set on the deployment, the lock and the check are simulated in your browser; with `NEXT_PUBLIC_CONTRACT_ADDRESS` set, the lock is a real Sepolia transaction and the release comes from the CRE workflow.
 
 ## The problem
 
@@ -26,6 +35,20 @@ Decreta binds an escrow to a CourtListener docket id and one docket event:
 The depositor pastes a CourtListener docket link, sees the real case name, court and status, picks the event, a payee, a refund address and a deadline, and locks the funds in `DecretaEscrow` on Sepolia. A Chainlink CRE workflow reads the docket every ten minutes. When the DON agrees the event happened, it writes a signed report to the contract and the money moves in the same transaction. Nobody signs a release. If the deadline passes first, anyone can trigger the refund.
 
 Every step lands as an event on-chain (`Deposited`, `Checked`, `Released`, `Refunded`), and the escrow record page shows them as a timeline next to the docket as it stands today.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  desk["app/escrows/page.tsx<br/>escrow desk"] -->|docket lookup| route["app/api/docket/[id]/route.ts"]
+  route --> cl["lib/courtlistener.ts<br/>CourtListener v4"]
+  desk -->|createEscrow from the wallet| escrow["contracts/src/DecretaEscrow.sol<br/>Sepolia"]
+  cre["cre/decreta-docket/main.ts<br/>Cron, HTTP per node, consensus"] -->|reads the docket| api[("CourtListener v4 API")]
+  cre -->|signed report through the forwarder| escrow
+  escrow -->|Released| payee(["payee"])
+  reader["lib/escrow-chain.ts<br/>state and event logs"] -->|getEscrow, getLogs| escrow
+  reader --> desk
+```
 
 ## How it uses Chainlink CRE
 
@@ -49,6 +72,12 @@ The same release rule lives in three places that must stay in sync: `evaluateCon
 
 Remove `main.ts` and steps 5, 6 and 8 never change state.
 
+## Bounty table
+
+| Bounty | Prize | Slots | Required tech | Code file | DEMO step |
+| --- | --- | --- | --- | --- | --- |
+| General (no tracks verified) |  | null | none | `cre/decreta-docket/main.ts` | 8 |
+
 ## Trust model and limits
 
 - The data source is CourtListener, the Free Law Project's mirror of PACER that RECAP users and bulk imports keep current. A stale docket means the escrow waits. A missing date always reads as "not yet", so it never pays early on missing data.
@@ -71,6 +100,7 @@ Remove `main.ts` and steps 5, 6 and 8 never change state.
 ## Quickstart
 
 ```bash
+git clone https://github.com/mericcintosun/decreta && cd decreta
 npm install
 cp .env.example .env.local   # every variable is optional
 npm run dev                  # http://localhost:3000
@@ -122,19 +152,6 @@ cre secrets set COURTLISTENER_API_TOKEN   # or put it in the project's secrets.y
 cre workflow simulate decreta-docket --target staging-settings --broadcast
 ```
 
-## Architecture
-
-```
- browser (Next.js)                       Sepolia
- ┌──────────────────────┐   createEscrow  ┌──────────────────┐
- │ /escrows  lock form   │ ──────────────> │  DecretaEscrow   │ ── Released ──> payee
- │ /escrows/[id] record  │ <── getEscrow ─ │  onReport()      │
- └─────────┬────────────┘                  └────────▲─────────┘
-           │ /api/docket/[id]                       │ signed report (EVM Write)
-           ▼                                        │
-   CourtListener v4  <──── HTTP, every node ──── CRE workflow (Cron, DON consensus)
-```
-
 ## What we would build next
 
 1. Confidential HTTP for the CourtListener call, so the API token never leaves the enclave.
@@ -145,6 +162,8 @@ cre workflow simulate decreta-docket --target staging-settings --broadcast
 
 ## AI use
 
-> We used AI coding assistants for scaffolding and boilerplate. Architecture, product decisions, and final code review are our own.
+The hackathon record states no AI policy (the rules page could not be read when this was written), so here is a plain disclosure. We used AI coding assistants for scaffolding, boilerplate, copy drafts and the fallback illustrations. Architecture, the release rule, product decisions and final code review are our own.
 
-(Adjust this section to the hackathon's disclosure rules before submitting.)
+## License
+
+MIT, see `LICENSE`.

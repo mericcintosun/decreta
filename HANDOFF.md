@@ -8,6 +8,68 @@ REDEPLOY NEEDED: DecretaEscrow (Phase 5 bytecode change)
 6. Update the address line in `SECURITY.md` and README "Deployed contract" together (they must match byte for byte).
 7. Re-run `cre workflow simulate decreta-docket --target staging-settings --broadcast`.
 
+# Phase 9: the docket scene and the submission package (2026-10-20)
+
+## Goal
+
+A judge landing on https://decreta.vercel.app sees a staged editorial page: one-sentence sections each with a figure, a desk sentence whose seed numbers count up, a trust diagram to explore, and sections that rise in with M1 on scroll. README, SUBMISSION.md and docs/VIDEO.md are ready to paste. DEMO step 1 (`/escrows`) stays one click from the first viewport.
+
+## Status
+
+All five slices are written and nothing was cut. Nothing was built or run: the agent had no shell.
+
+- Slice 1: `.farm-delta.md` (phase 9) has 7 Diagnosis items, 9 Changes rows and 1 Kept row, with final Grep counts.
+- Slice 2: `.decreta-entrance` in `app/globals.css:150-161` (decreta-rise on `view()`, `entry 0% entry 40%`, inside `@media (prefers-reduced-motion: no-preference)` and `@supports (animation-timeline: view())`), and listed in the reduced-motion block. `lib/brand.ts` (`sceneSrc`), `components/scene-slot.tsx`, `outputFileTracingIncludes` in `next.config.ts`. Four plates: `public/illustrations/step-paste.svg`, `step-lock.svg`, `step-agree.svg`, `step-pay.svg`.
+- Slice 3: `app/page.tsx` rebuilt on the same rail grid. One-sentence lede, hero `SceneSlot n={1}` at `mt-10 sm:mt-12`, widened 10rem past the column at lg to fill the empty right of the fold. Problem is two sentences. The desk sentence uses `DeskCount` (ETH total as rust Fraunces `text-5xl`). Procedure `<li>`s are one sentence under `SceneSlot n={2..5}`. Trust is one sentence, `TrustDiagram`, then two one-sentence limits.
+- Slice 4: footer in `app/layout.tsx` is one sentence plus one links row (contract or the "No contract is set" line, Source, Hackathon).
+- Slice 5: README rewritten (top, Try it in 60 seconds, mermaid architecture, 4-command quickstart, bounty table copied from DELIVERY.md, AI use, License), `SUBMISSION.md`, `docs/VIDEO.md`, `docs/SCREENSHOTS.md`, `LICENSE` (MIT, Meric, 2026), one IDENTITY amendment line.
+
+**Scene slots:** all five are SVG fallbacks. `public/brand/` does not exist (Glob returned nothing), so scene 1 shows `docket-sheet.svg` and scenes 2 to 5 show the four step plates. Dropping `public/brand/scene-N.png` in switches each slot without a code change.
+
+## Decisions
+
+- **Hero figure width.** The figure is `lg:w-[calc(100%+10rem)]`. At lg the container is 992px, rail plus gap is 216px and the 65ch column is about 520px, so 10rem more still fits inside the container. The figcaption stays at `max-w-[65ch]`. The trust diagram uses the same widening so five labels fit in one row.
+- **Procedure markers.** The figure sits first in each `<li>`, and the image is `block`, so the rust Fraunces marker sits at the top of each plate instead of on a text line.
+- **Hero frame** keeps `decreta-ruled p-6` on top of the slot's `border border-border bg-secondary`, per the earlier amendment that ruled paper lives in the figure frame.
+- **DeskCount** renders the exact final string on the server and on first client render, then waits for an `IntersectionObserver` hit at 0.6 before counting from zero. The count is skipped under reduced motion, for a zero value, or with no IntersectionObserver. `t.refunded` and the docket count stay plain text: the spec names four counters.
+- **TrustDiagram** captions come from the existing trust copy and SECURITY.md (CourtListener as the only source, DON agreement on the two dates, one rotatable forwarder, no owner path to funds, refund after deadline). No digits in it. The node buttons sit in a `role="group"`, and hover, focus and click all select.
+- **Problem second sentence** (Kleros) is kept in muted ink. It is the only line that answers "why not crypto escrow", which lawyers will ask.
+- **README Try it** uses the fake-mode path ("Check the docket now" on the record) because the live deploy has no contract until the redeploy.
+- **Phase 8 copy loss:** "It runs on Sepolia only and is not legal advice" moved off the trust section; the footer sentence carries it.
+
+## Failed attempts
+
+None.
+
+## Files changed
+
+New: `lib/brand.ts`, `components/scene-slot.tsx`, `components/desk-count.tsx`, `components/trust-diagram.tsx`, `public/illustrations/step-paste.svg`, `step-lock.svg`, `step-agree.svg`, `step-pay.svg`, `SUBMISSION.md`, `docs/VIDEO.md`, `docs/SCREENSHOTS.md`, `LICENSE`, `.farm-commits.json`.
+
+Edited: `.farm-delta.md` (overwritten for phase 9), `app/globals.css`, `next.config.ts`, `app/page.tsx`, `app/layout.tsx` (footer only), `README.md`, `IDENTITY.md` (one amendment line), `HANDOFF.md`.
+
+Untouched: `contracts/`, `cre/`, `lib/adapters/`, `lib/chain.ts`, `lib/escrow-chain.ts`, `app/api/`, `scripts/`, `.env*`, `components/escrow-console.tsx`, `components/wallet-panel.tsx`, `SECURITY.md`, `public/logo.svg`, `app/icon.svg`, `public/__farm.txt`, the header and brand link in `app/layout.tsx`. `contracts/script/Smoke.s.sol` still exists. `.gitignore` already holds `.env*` and `!.env.example` (lines 4 and 5).
+
+## Commands run
+
+None, no shell.
+
+## Open questions
+
+- **Unverified until the runner runs commands:**
+  - `npm run build`. Risk points: the template literal type on `SceneSlot`'s `fallback` prop, `outputFileTracingIncludes` as a top-level key (it is top level from Next 15, and `package.json` pins `^15.4.5`), and `node:fs` in `lib/brand.ts`, imported only by the server component `scene-slot.tsx`.
+  - Whether Tailwind v4 emits `lg:w-[calc(100%+10rem)]` with spaces around the plus sign (it normalizes math operators in arbitrary values). Check the built CSS.
+  - The scroll entrance in Chrome (view timelines ship there); Firefox and Safari without support show content with no motion by design.
+  - Lighthouse at 390 and 1440 px.
+- **CLAUDE.md guardrail** says "No `fs.` in `lib/`". `lib/brand.ts` imports `existsSync` from `node:fs` as the spec requires; it only reads, never writes, and the literal `fs.` does not appear.
+- **Desk sentence wording** changed from "have already paid out because their dockets closed or recorded the filing" to "paid out when their docket moved". Same facts from `totals`.
+- **SUBMISSION character counts** are estimates; the form's counters decide.
+
+## Next best step
+
+The Phase 6 judge round on the redeployed landing, then the REDEPLOY NEEDED list at the top of this file, then record the video per `docs/VIDEO.md`.
+
+---
+
 # Phase 8: editorial landing pass (2026-10-20)
 
 ## Goal
@@ -582,3 +644,12 @@ Verify the `CRE_FORWARDER` default against the CRE docs before deploying. Done w
 - The 90-second flow works end to end: real docket paste, real Sepolia lock, CRE simulate with `--broadcast`, the record page stamps RELEASED, the open-docket escrow stays LOCKED.
 - Wow moment rehearsed three times on the closed docket.
 - BUIDL submitted on DoraHacks, Chainlink bounty ticked if a row exists.
+
+---
+
+# Manual submit checklist (human, after Phase 9)
+
+- [ ] Open the DoraHacks detail tab of https://dorahacks.io/hackathon/legal-hack-2026 in a browser, copy any opt-in text exactly, tick every opt-in box, and tick a Chainlink prize row if one exists (see `DELIVERY.md` and `SUBMISSION.md`).
+- [ ] Video recorded per `docs/VIDEO.md`; its URL replaces `<ADD_VIDEO_URL>` in README.md and SUBMISSION.md.
+- [ ] After the redeploy, the contract address replaces `<NEXT_PUBLIC_CONTRACT_ADDRESS>` in README.md and SECURITY.md together, byte for byte, with the Smoke `createEscrow` tx hash added to the README.
+- [ ] BUIDL submitted with the fields from `SUBMISSION.md` before 2026-11-01 01:01 UTC.
