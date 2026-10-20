@@ -1,21 +1,20 @@
 import { NextResponse } from "next/server";
 import { adapter, adapterMode } from "@/lib/adapter";
-import type { ApiResult, DocketSnapshot } from "@/lib/types";
+import { fail } from "@/lib/errors";
+import { docketIdParam } from "@/lib/schemas";
 
 // Server-side docket preview so the CourtListener token stays off the client.
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params;
-  const docketId = Number(id);
-  if (!Number.isSafeInteger(docketId) || docketId <= 0) {
-    const body: ApiResult<DocketSnapshot> = {
-      ok: false,
-      status: 400,
-      source: adapterMode === "real" ? "courtlistener" : "seed",
-      error: { code: "bad_id", message: "Docket id must be a positive number." },
-    };
-    return NextResponse.json(body, { status: 400 });
+  const parsed = docketIdParam.safeParse((await params).id);
+  if (!parsed.success) {
+    const body = fail(
+      "invalid_input",
+      adapterMode === "real" ? "courtlistener" : "seed",
+      "Docket id must be a positive whole number."
+    );
+    return NextResponse.json(body, { status: body.status });
   }
 
-  const result = await adapter.getDocket(docketId);
+  const result = await adapter.getDocket(parsed.data);
   return NextResponse.json(result, { status: result.ok ? 200 : result.status });
 }

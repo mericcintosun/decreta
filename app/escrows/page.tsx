@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { EscrowConsole } from "@/components/escrow-console";
-import { adapter, adapterMode } from "@/lib/adapter";
-import { hasLiveCourtListener } from "@/lib/courtlistener";
+import { adapter, hasLiveDockets } from "@/lib/adapter";
 import { totals, type DocketSnapshot } from "@/lib/data";
 
 export const metadata: Metadata = {
@@ -33,14 +32,14 @@ export default async function EscrowDeskPage() {
           </p>
           {!list.ok && (
             <p role="alert" className="border-l-4 border-bad bg-secondary p-3 text-sm">
-              The register could not be read: {list.error.message}
+              The register could not be read: {list.hint}
             </p>
           )}
         </header>
         <EscrowConsole
           seedEscrows={escrows}
           seedDockets={dockets}
-          liveDockets={adapterMode === "real" && hasLiveCourtListener()}
+          liveDockets={hasLiveDockets()}
         />
       </div>
     </div>
