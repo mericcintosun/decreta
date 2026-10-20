@@ -5,7 +5,7 @@ Decreta is settlement escrow bound to a US federal court docket: the parties loc
 | Address | Link |
 | --- | --- |
 | Live demo | https://decreta.vercel.app |
-| Video | <ADD_VIDEO_URL> |
+| Video | https://decreta.vercel.app/demo-video.mp4 |
 | Contract (Sepolia) | `<NEXT_PUBLIC_CONTRACT_ADDRESS>`, https://sepolia.etherscan.io/address/<address> (placeholder until the Phase 5 redeploy) |
 | Source | https://github.com/mericcintosun/decreta |
 | Hackathon | BLI Legal Tech Hackathon 2, https://dorahacks.io/hackathon/legal-hack-2026 (track: General, no tracks verified) |

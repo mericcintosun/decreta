@@ -34,7 +34,7 @@ Verify against the live form.
 | --- | --- |
 | GitHub | https://github.com/mericcintosun/decreta |
 | Website | https://decreta.vercel.app |
-| Video | <ADD_VIDEO_URL> |
+| Video | https://decreta.vercel.app/demo-video.mp4 |
 
 ## 6. Description
 
