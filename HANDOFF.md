@@ -1,12 +1,71 @@
 REDEPLOY NEEDED: DecretaEscrow (Phase 5 bytecode change)
 
 1. Check that the `FARM_EVM_PRIVATE_KEY` wallet holds at least 0.1 Sepolia ETH (top up at https://faucets.chain.link/sepolia).
-2. Press the Kontrat deploy step (`Deploy.s.sol`), then set `NEXT_PUBLIC_CONTRACT_ADDRESS` and `DEPLOYED_CONTRACT` to the new address.
-3. Re-run `contracts:smoke` and record its `createEscrow` tx hash in the README as on-chain proof.
+2. Press the Kontrat deploy step (`Deploy.s.sol`), then set `NEXT_PUBLIC_CONTRACT_ADDRESS` and `DEPLOYED_CONTRACT` to the new address. Also set `NEXT_PUBLIC_CONTRACT_ADDRESS` in the Vercel project env and redeploy, so decreta.vercel.app stops simulating the lock.
+3. Re-run `contracts:smoke` and replace `<SMOKE_CREATE_ESCROW_TX>` in the README "Example deposit tx" row with its `createEscrow` tx hash (as a https://sepolia.etherscan.io/tx/ link).
 4. Run `demo:reset`.
 5. Set `escrowAddress` in `cre/decreta-docket/config.staging.json` to the new address.
-6. Update the address line in `SECURITY.md` and README "Deployed contract" together (they must match byte for byte).
+6. Replace every `<NEXT_PUBLIC_CONTRACT_ADDRESS>` token in README.md (the Contract row and the "Deployed contract" bullet) and in `SECURITY.md` line 7 with the new address. The README bullet and the SECURITY line must match byte for byte.
 7. Re-run `cre workflow simulate decreta-docket --target staging-settings --broadcast`.
+8. Try one `/escrows` lock on https://decreta.vercel.app and check that the confirmation card links a `Deposited` event on Etherscan.
+
+# Phase 6: first jury fixes (2026-10-20)
+
+## Goal
+
+Apply the first judge panel's repo findings only: the README says what runs on chain and what runs in the browser, the contract address and the Smoke deposit tx rows are ready for the deploy step to fill, and no repo file claims Confidential HTTP as built. No feature, UI or code change.
+
+## Status
+
+Slices 1 to 4 are written. Nothing was cut. Nothing was built, run or tested: the agent had no shell.
+
+- Slice 1: no file changed. The `Confidential` grep over README.md, SUBMISSION.md, DEMO.md, SECURITY.md, `docs/`, `app/`, `components/` and `lib/` returned exactly the three expected hits (`README.md:58` and `:157` before this phase's edits, now `README.md:65` and `:158`, and `SUBMISSION.md:70`). All three describe it as future work or a non-claim. `Not mock` returned 0 hits.
+- Slice 2: README Contract row now reads "(set by the deploy step; until then the live demo simulates the lock, see What runs where)". New README row "Example deposit tx" holds the Smoke tx token that REDEPLOY step 3 fills. The README "Deployed contract" bullet and `SECURITY.md:7` now use `https://sepolia.etherscan.io/address/<NEXT_PUBLIC_CONTRACT_ADDRESS>` instead of `<address>`, so one token replace fills every address line. REDEPLOY steps 2, 3 and 6 reworded, step 8 added. `contracts/script/Smoke.s.sol` checked, not edited: `vm.envAddress("DEPLOYED_CONTRACT")` at line 26 and one `createEscrow{value: 0.0001 ether}` at line 29.
+- Slice 3: README `## Bounty table` removed. `## What runs where` added directly under the address table with the three bullets. `App.sol` grep over `contracts/script`, `contracts/test` and `contracts/src/DecretaEscrow.sol`: 0 hits. `__farm` grep over `app`, `components`, `lib` and `next.config.ts`: 0 hits.
+- Slice 4: this section, the fix ledger at the end of the file, `.farm-commits.json`.
+
+## Decisions
+
+- **Etherscan URL token.** The address URLs used `<address>`, a second token the deploy step would have to know about. They now use `<NEXT_PUBLIC_CONTRACT_ADDRESS>` too, so a single replace fills the README row, the README bullet and SECURITY.md. The address part of `README.md:99` and `SECURITY.md:7` ("Deployed contract: `<NEXT_PUBLIC_CONTRACT_ADDRESS>` on Sepolia, https://sepolia.etherscan.io/address/<NEXT_PUBLIC_CONTRACT_ADDRESS>.") is byte for byte equal; the sentence after it differs as before (README names the env keys, SECURITY names `lib/config.ts` and the Phase 5 bytecode note). The REDEPLOY block names the token, not an address, so it has no address line to diverge.
+- **Slice 1 needed no rewrite.** Every hit already said "next task", "what we would build next" or "nothing claims". The farm's video, deck and submission stack line (fix 1) are not repo text this phase may write.
+- **"Try it in 60 seconds" kept as is.** Its closing sentence already says the lock and check are simulated with no contract set, which agrees with What runs where.
+
+## Failed attempts
+
+None.
+
+## Files changed
+
+Edited: `README.md`, `SECURITY.md` (line 7 only), `HANDOFF.md`. New: `.farm-commits.json`.
+
+Untouched: `app/`, `components/`, `lib/`, `cre/`, `contracts/`, `package.json`, `DEMO.md`, `SUBMISSION.md`, `docs/`, `public/__farm.txt`, `.farm-scaffold.json`, `.farm-delta.md`, `.env*`.
+
+## Commands run
+
+None, no shell.
+
+## Open questions
+
+- **Human action: `git rm contracts/src/App.sol`.** The unused template contract. Nothing in `contracts/script`, `contracts/test` or `contracts/src/DecretaEscrow.sol` names it (Grep, 0 hits). The agent cannot delete files.
+- **Farm runner files** (`public/__farm.txt`, `.farm-scaffold.json`, `.farm-delta.md`): removal declined for the agent; they are farm runner files and the human decides. Nothing in `app`, `components`, `lib` or `next.config.ts` references `__farm` (Grep, 0 hits).
+- **`isLiveChain` also needs the chain id.** `lib/chain.ts:16` is `contractAddress !== null && chainId === sepolia.id`, so Vercel also needs `NEXT_PUBLIC_CHAIN_ID=11155111` (or its default) for the lock to go live. Not checked further: `lib/config.ts` is outside this phase.
+- **Commit plan and whole files.** Slices 2 and 3 both edit README.md. If the runner commits whole files, the second `fix(jury)` commit has nothing left to add; HANDOFF.md is kept out of the first commit so the closing `faz-6:` commit is never empty. Allow an empty commit for the second entry, or fold it into the first.
+- **Unverified until the runner runs commands:** `npm run build`, `forge test` (12 tests by Grep count), the deploy, Smoke, the Vercel redeploy and the live lock.
+
+## Next best step
+
+Runner: the REDEPLOY list above (deploy, Smoke, fill both tokens, Vercel env, one live lock). Farm: regenerate the video script, deck and submission pack for fixes 1, 4, 5 and 6. Then Jury round 2.
+
+## Panel re-check
+
+- `ConsensusAggregationByFields` with `median`: verified, `cre/decreta-docket/main.ts:107` (`ConsensusAggregationByFields<DocketObservation>({ terminatedDay: median, lastFilingDay: median })`).
+- `writeReport`: verified, `cre/decreta-docket/main.ts:138` (`evm.writeReport(runtime, { receiver: config.escrowAddress, report, ... })`).
+- `getSecret`: verified, `cre/decreta-docket/main.ts:93` (`runtime.getSecret({ id: "COURTLISTENER_API_TOKEN" })`).
+- 12 Foundry tests including `test_onReportRevertsForNonForwarder`: the file declares 12 `function test` entries (Grep count) and `test_onReportRevertsForNonForwarder` sits at `contracts/test/DecretaEscrow.t.sol:50`. That they pass is could not verify: no `forge test` run.
+- Seed case names for 68519034 and 69102877 (`lib/data/seed.ts:43` "Harlow Freight LLC v. Brightline Logistics Inc." and `:54` "Okafor v. Meridian Health Partners"): could not verify, these are illustrative seed text and no CourtListener response for either id is in the repo.
+- Confidential HTTP as built: not claimed anywhere in the repo text. `main.ts:13` to `:17` says the token comes from CRE secrets in node mode and the Confidential HTTP swap is still a task.
+
+---
 
 # Phase 9: the docket scene and the submission package (2026-10-20)
 
@@ -653,3 +712,14 @@ Verify the `CRE_FORWARDER` default against the CRE docs before deploying. Done w
 - [ ] Video recorded per `docs/VIDEO.md`; its URL replaces `<ADD_VIDEO_URL>` in README.md and SUBMISSION.md.
 - [ ] After the redeploy, the contract address replaces `<NEXT_PUBLIC_CONTRACT_ADDRESS>` in README.md and SECURITY.md together, byte for byte, with the Smoke `createEscrow` tx hash added to the README.
 - [ ] BUIDL submitted with the fields from `SUBMISSION.md` before 2026-11-01 01:01 UTC.
+
+# Phase 6 fix ledger (jury round 1)
+
+- blocker A (Confidential HTTP shown as built) | handled-by-the-farm | the claim lives in the video, deck and SUBMISSION stack line (fix 1); the repo re-check found no claim, so no repo file changed: README.md:65 and :158 and SUBMISSION.md:70 already state it as future work or a non-claim; the video, deck and SUBMISSION stack line are fix 1, handled by the farm
+- blocker B (contract row is a placeholder, live demo never touches the chain) | applied | README.md Contract row and new "Example deposit tx" row, README.md "Deployed contract" bullet, SECURITY.md:7, HANDOFF.md REDEPLOY steps 2, 3, 6 and 8; the real lock and tx still wait on the runner's deploy and Smoke
+- fix 1 (video scene 9, deck slide 6, the SUBMISSION stack line, video scene 3) | handled-by-the-farm | video, deck and submission pack wording belongs to the farm
+- fix 2 (surface: deploy) | applied | same change as blocker B: README.md, SECURITY.md, HANDOFF.md REDEPLOY block
+- fix 3 (surface: readme) | applied | README.md: `## Bounty table` removed, `## What runs where` added; `contracts/src/App.sol` removal declined for the agent (cannot delete files, 0 references by Grep, human runs `git rm contracts/src/App.sol`); `public/__farm.txt` and `.farm-*` removal declined for the agent (farm runner files, human decides)
+- fix 4 (deck slide 7, the first user, and the source for "250,000+") | handled-by-the-farm | deck content belongs to the farm
+- fix 5 (video scenes 1 and 2, open on `/escrows/compare`) | handled-by-the-farm | video script belongs to the farm
+- fix 6 (video scene 7, the `cre workflow simulate` cutaway) | handled-by-the-farm | video script belongs to the farm
