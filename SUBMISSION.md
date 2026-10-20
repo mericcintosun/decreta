@@ -68,3 +68,5 @@ From DELIVERY.md, verbatim:
 ## What this submission claims
 
 Only what DEMO.md steps 1 to 8 show: the desk (1), the docket lookup (2), the lock (3), the record stamped LOCKED (4), the check (5), RELEASED with the balance line (6), the open-docket escrow staying LOCKED (7), and the side by side page (8). Nothing in the fields above claims mainnet, real client funds, a challenge window or Confidential HTTP.
+
+Known gap: until the contract is deployed and `NEXT_PUBLIC_CONTRACT_ADDRESS` is set on Vercel, the lock and the release on https://decreta.vercel.app are simulated in the browser (`lib/adapters/fake.ts`), and the seed case names in `lib/data/seed.ts` are illustrative. The REDEPLOY steps at the top of HANDOFF.md close both.
