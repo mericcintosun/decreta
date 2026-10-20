@@ -6,7 +6,7 @@ import { totals } from "@/lib/data";
 import type { ApiResult } from "@/lib/types";
 
 function unwrap<T>(result: ApiResult<T>): T {
-  if (!result.ok) throw new Error(result.error.message);
+  if (!result.ok) throw new Error(result.hint);
   return result.data;
 }
 

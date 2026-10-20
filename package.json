@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "NODE_ENV=production next build",
     "start": "next start",
-    "seed": "tsx scripts/seed.ts"
+    "seed": "tsx scripts/seed.ts",
+    "test:contracts": "cd contracts && forge test -vv"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.2",
@@ -17,7 +18,8 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^3.0.1",
-    "viem": "^2.31.0"
+    "viem": "^2.31.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.11",

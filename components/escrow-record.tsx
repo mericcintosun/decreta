@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { explorerTx, isLiveChain, readEscrowStatus } from "@/lib/chain";
+import type { ErrorCode } from "@/lib/errors";
 import {
   conditionSentence,
   courtListenerUrl,
@@ -60,7 +61,7 @@ export function EscrowRecord({
   const [docket, setDocket] = useState<DocketSnapshot | null>(seedDocket ?? seed?.docketSnapshot ?? null);
   const [resolved, setResolved] = useState(seed !== null);
   const [checking, setChecking] = useState(false);
-  const [checkError, setCheckError] = useState<string | null>(null);
+  const [checkError, setCheckError] = useState<{ code: ErrorCode | null; hint: string } | null>(null);
 
   // Escrows created on the mock path live in this browser only.
   useEffect(() => {
@@ -105,7 +106,10 @@ export function EscrowRecord({
     try {
       const res = await fetch(`/api/docket/${escrow.docketId}`);
       const body = (await res.json()) as ApiResult<DocketSnapshot>;
-      if (!body.ok) throw new Error(body.error.message || `Docket read failed with status ${res.status}.`);
+      if (!body.ok) {
+        setCheckError({ code: body.error, hint: body.hint || `Docket read failed with status ${res.status}.` });
+        return;
+      }
       const fresh = body.data;
       setDocket(fresh);
 
@@ -133,7 +137,7 @@ export function EscrowRecord({
       setEscrow(next);
       if (next.local) saveLocalEscrow(next);
     } catch (err) {
-      setCheckError(err instanceof Error ? err.message : "Docket check failed.");
+      setCheckError({ code: null, hint: err instanceof Error ? err.message : "Docket check failed." });
     } finally {
       setChecking(false);
     }
@@ -246,8 +250,19 @@ export function EscrowRecord({
           </span>
         </div>
         {checkError && (
-          <p role="alert" className="border-l-4 border-bad bg-secondary p-3 text-sm">
-            {checkError}
+          <p
+            role="alert"
+            className={cn(
+              "flex flex-wrap items-center gap-3 border-l-4 bg-secondary p-3 text-sm",
+              checkError.code === "not_configured" ? "border-ochre" : "border-bad"
+            )}
+          >
+            {checkError.code && (
+              <Badge variant={checkError.code === "not_configured" ? "locked" : "refunded"}>
+                {checkError.code.replaceAll("_", " ")}
+              </Badge>
+            )}
+            <span>{checkError.hint}</span>
           </p>
         )}
       </section>
@@ -271,7 +286,7 @@ export function EscrowRecord({
               </p>
               <p className="mt-1">{ev.note}</p>
               <p className="text-sm text-muted-foreground">
-                {isLiveChain && !escrow.local && ev.kind !== "checked" ? (
+                {isLiveChain && !escrow.local && ev.kind !== "checked" && !/^0x0+$/.test(ev.txHash) ? (
                   <a href={explorerTx(ev.txHash)} target="_blank" rel="noreferrer" className="underline underline-offset-4">
                     {shortHex(ev.txHash)} on Etherscan
                   </a>

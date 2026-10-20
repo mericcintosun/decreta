@@ -4,6 +4,8 @@
 // /api/rest/v4/dockets/{id}/ endpoint (case_name, docket_number, court_id,
 // date_filed, date_terminated, date_last_filing).
 
+import type { ErrorCode } from "./errors";
+
 export type Hex = `0x${string}`;
 
 export type ConditionKind = "terminated" | "filing-after";
@@ -57,7 +59,8 @@ export interface Escrow {
   docketSnapshot?: DocketSnapshot;
 }
 
+/** The failure branch: a typed code for the UI, a plain sentence for people. */
+export type ApiFailure = { ok: false; error: ErrorCode; hint: string; status: number; source: DataSource };
+
 /** The one response shape for every API route and adapter call. */
-export type ApiResult<T> =
-  | { ok: true; data: T; source: DataSource }
-  | { ok: false; error: { code: string; message: string }; status: number; source: DataSource };
+export type ApiResult<T> = { ok: true; data: T; source: DataSource } | ApiFailure;

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { explorerTx, isLiveChain, lockFunds } from "@/lib/chain";
+import type { ErrorCode } from "@/lib/errors";
 import {
   conditionSentence,
   courtListenerUrl,
@@ -32,7 +33,7 @@ type Preview =
   | { state: "idle" }
   | { state: "loading"; id: number }
   | { state: "ready"; docket: DocketSnapshot; source: DataSource }
-  | { state: "error"; message: string };
+  | { state: "error"; message: string; code?: ErrorCode };
 
 type Filter = "all" | EscrowStatus;
 
@@ -87,7 +88,7 @@ export function EscrowConsole({
       const res = await fetch(`/api/docket/${id}`);
       const body = (await res.json()) as ApiResult<DocketSnapshot>;
       if (!body.ok) {
-        setPreview({ state: "error", message: body.error.message || `Lookup failed with status ${res.status}.` });
+        setPreview({ state: "error", message: body.hint || `Lookup failed with status ${res.status}.`, code: body.error });
         return;
       }
       setPreview({ state: "ready", docket: body.data, source: body.source });
@@ -224,8 +225,19 @@ export function EscrowConsole({
               </div>
             )}
             {preview.state === "error" && (
-              <div role="alert" className="border-l-4 border-bad bg-secondary p-4 text-sm">
-                {preview.message}
+              <div
+                role="alert"
+                className={cn(
+                  "flex flex-wrap items-center gap-3 border-l-4 bg-secondary p-4 text-sm",
+                  preview.code === "not_configured" ? "border-ochre" : "border-bad"
+                )}
+              >
+                {preview.code && (
+                  <Badge variant={preview.code === "not_configured" ? "locked" : "refunded"}>
+                    {preview.code.replaceAll("_", " ")}
+                  </Badge>
+                )}
+                <span>{preview.message}</span>
               </div>
             )}
             {docket && preview.state === "ready" && (
