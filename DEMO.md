@@ -18,6 +18,7 @@
 4. Open the record. It is stamped LOCKED. Route file: `app/escrows/[id]/page.tsx`.
 5. CRE run. In the terminal, `cre workflow simulate decreta-docket --target staging-settings --broadcast`. On screen, a `Checked` event lands on the record. Route file: `app/escrows/[id]/page.tsx`.
 6. The record stamps RELEASED to the plaintiff. Route file: `app/escrows/[id]/page.tsx`.
+   In `ADAPTER_MODE=real` the stamp, amount, parties and the Deposited, Checked and Released rows with their tx links come from `DecretaEscrow` on Sepolia; only the memo and party labels still come from the seed.
 7. Open `/escrows/2`, the escrow on the open docket 69102877. It stays LOCKED. Route file: `app/escrows/[id]/page.tsx`.
 
 ## Fake mode (default, `ADAPTER_MODE=fake`)

@@ -40,6 +40,8 @@ The same release rule lives in three places that must stay in sync: `evaluateCon
 - There is no challenge window yet. A 72-hour timelock during which either side can dispute a release is the next contract change.
 - Sepolia testnet only. This is not legal advice.
 
+**Trust model note.** `onReport` accepts only the configured CRE forwarder. On Sepolia that is the MockKeystoneForwarder used by `cre workflow simulate --broadcast`, which accepts any simulated report, so today anyone who can run a simulation against this contract can release a locked escrow. The next hardening is the production KeystoneForwarder (via `setForwarder`) plus a check in `onReport` that the report's workflow owner and workflow id match ours.
+
 ## Tech stack
 
 - Next.js 15 (App Router), TypeScript strict, Tailwind CSS v4, shadcn-style primitives
@@ -66,6 +68,10 @@ cd contracts
 forge build && forge test
 PRIVATE_KEY=0x... forge script script/Deploy.s.sol --rpc-url $RPC_URL --broadcast
 ```
+
+Tests: `npm run test:contracts` (runs `forge test -vv` in `contracts/`, including the fuzz test).
+
+With `ADAPTER_MODE=real`, `NEXT_PUBLIC_CONTRACT_ADDRESS`, `SEPOLIA_RPC_URL` and `ESCROW_DEPLOY_BLOCK` set, the register and the escrow record read `DecretaEscrow` on Sepolia: status from `getEscrow`, the timeline from the `Deposited`, `Checked`, `Released` and `Refunded` logs.
 
 CRE workflow (needs the `cre` CLI and Bun 1.2.21+):
 

@@ -2,6 +2,111 @@
 
 You are picking up a working scaffold. Read this whole file, then start on Mission task 1. Keep `npm run build` green after every change.
 
+# Phase 2: real Sepolia escrow behind the adapter (2026-10-20)
+
+## Goal
+
+With `ADAPTER_MODE=real`, escrow reads (status, amount, parties, and the `Deposited` / `Checked` / `Released` / `Refunded` timeline) come from `DecretaEscrow` on Sepolia, so DEMO steps 3, 4 and 6 show chain truth. `ADAPTER_MODE=fake` (default) still runs all 7 steps on seed data.
+
+## Status
+
+All five slices are written. Nothing was built, run or tested: the agent had no shell.
+
+- **Went real:** `realAdapter.getEscrow` (`lib/adapters/real.ts`) reads `getEscrow` through `readEscrow` and the four event kinds through `readEscrowEvents` (`lib/escrow-chain.ts`), with `source: "chain"`. `realAdapter.listEscrows` reads `escrowCount` and loops ids `1..min(count, 50)`.
+- **CourtListener boundary hardened:** `lib/courtlistener.ts` has an 8 s timeout, 1 retry only on timeout or 5xx, zod parse and typed `ErrorCode`s, and no seed import.
+- **Still on fixtures:**
+  - `memo` and party labels: taken from the seed escrow with the same id and docket, else "Payee when met" and "Refund address".
+  - Real mode without `NEXT_PUBLIC_CONTRACT_ADDRESS`: escrows fall back to seed (`source: "seed"`).
+  - Real mode without `COURTLISTENER_API_TOKEN`: dockets fall back to seed.
+  - Fake mode: everything stays on seed.
+  - The client poll in `components/escrow-record.tsx`: still status-only, and it appends a placeholder event with the previous tx hash (Phase 3 replaces it with `watchContractEvent`).
+- **Register rows** carry state-derived events only. One `getLogs` set per row would cost 4 x 50 calls. In the list, released or refunded rows show `0` ETH, because `getEscrow` zeroes `amount` after payout. The record page restores the amount from the `Deposited` log.
+- **Nothing was cut.**
+
+## Decisions
+
+- **Config vs secrets split.** The spec asked for both "one config file" and "no client import of a secret reader", so there are two modules:
+  - `lib/config.ts` is client-safe: `NEXT_PUBLIC_*` keys and constants. `lib/chain.ts` (client) and `lib/escrow-chain.ts` (server) both read it.
+  - `lib/secrets.ts` is server only and the only reader of `COURTLISTENER_API_TOKEN`, `SEPOLIA_RPC_URL` and `ESCROW_DEPLOY_BLOCK`.
+  - `ADAPTER_MODE` is read only in `lib/adapter.ts`.
+- **Seed escrow 1 is now `locked`,** with only its `deposited` event. This mirrors the escrow `Smoke.s.sol` creates as id 1 on a fresh contract, and lets "Check the docket now" stamp RELEASED on camera in fake mode.
+- **`ApiResult` failure is now `{ ok: false, error: ErrorCode, hint, status, source }`** (`ApiFailure` in `lib/types.ts`). `fail()` in `lib/errors.ts` builds it.
+  - Both clients show `hint` with a `Badge`: variant `locked` (ochre, WARN) for `not_configured`, variant `refunded` (bad) otherwise.
+- **`COURT_NAMES` moved to `lib/courts.ts`,** so `lib/courtlistener.ts` no longer imports the seed. `lib/data/seed.ts` re-exports it, so `@/lib/data` consumers are unchanged.
+- **`GET /api/escrows` has no id to validate.** It now parses an optional `?status=locked|released|refunded` with `escrowListQuery` as its first statement and filters on it. Same route; one new optional query param.
+- **`hasLiveDockets()` moved into `lib/adapter.ts`,** so `app/escrows/page.tsx` no longer imports `lib/courtlistener.ts`.
+- **Events known only from state get a zero tx hash.** The record shows them without an Etherscan link (`components/escrow-record.tsx`, the `^0x0+$` check). Their `at` is the read time.
+- **`app/page.tsx` (outside DEMO) got a one-token change,** `result.error.message` to `result.hint`, because the `ApiResult` type change would otherwise break the build. Its copy was not touched.
+
+## Failed attempts
+
+None.
+
+## Files changed
+
+New:
+- `lib/config.ts`, `lib/secrets.ts`, `lib/errors.ts`, `lib/schemas.ts`, `lib/log.ts`, `lib/courts.ts`
+- `lib/escrow-abi.ts`, `lib/escrow-chain.ts`
+- `lib/adapters/types.ts`, `lib/adapters/fake.ts`, `lib/adapters/real.ts`
+- `.farm-commits.json`
+
+Edited:
+- `lib/adapter.ts` (now the selector only), `lib/types.ts`, `lib/courtlistener.ts`, `lib/chain.ts`, `lib/data/seed.ts`
+- `app/api/docket/[id]/route.ts`, `app/api/escrows/route.ts`, `app/api/escrows/[id]/route.ts`, `app/escrows/page.tsx`, `app/page.tsx`
+- `components/escrow-console.tsx`, `components/escrow-record.tsx`
+- `contracts/test/DecretaEscrow.t.sol`
+- `package.json` (`zod`, `test:contracts`), `.env.example`, `README.md`, `DEMO.md`, `HANDOFF.md`
+
+Unchanged after review: `contracts/src/DecretaEscrow.sol`, `contracts/script/Smoke.s.sol`, `cre/decreta-docket/main.ts`.
+
+## Commands run
+
+None, no shell.
+
+## Open questions
+
+- **Mock forwarder trust gap.** The Sepolia MockKeystoneForwarder accepts any simulated report, so anyone who runs a simulation against this contract can release a locked escrow. The fix is the production KeystoneForwarder via `setForwarder`, plus a workflow-owner and workflow-id check in `onReport`. That is a contract storage change, so it is asked here, not done. README "Trust model note" says this.
+- **Docket id reality.** 68519034 and 69102877 are still illustrative seed ids. Confirm on courtlistener.com that 68519034 is terminated and 69102877 is open. If not, replace them at the five sync points: `lib/data/seed.ts`, the "Try" buttons in `escrow-console.tsx`, `config.staging.json`, `Smoke.s.sol` and `DEMO.md`.
+- **Escrow 2 on chain.** `Smoke.s.sol` creates only escrow 1 (docket 68519034). In real mode with a contract set:
+  - `/escrows/2` (DEMO step 7) returns `not_found` until a second escrow on 69102877 is locked, for example from `/escrows` with the wallet.
+  - `app/page.tsx` calls `getEscrow(2)` through `unwrap`, so the landing page throws to `app/error.tsx` until then.
+  - Option A: a second `createEscrow` on 69102877 right after Smoke.
+  - Option B: allow `Smoke.s.sol` to lock both. That changes a "leave as is" file, so I am asking first.
+- **Landing copy is now stale.** `app/page.tsx:47` says escrow 1's ETH "moved to the plaintiff". Seed escrow 1 is now locked. That page is outside DEMO, so its copy was not edited.
+- **`getLogs` range.** `readEscrowEvents` scans from `ESCROW_DEPLOY_BLOCK` to latest. Some RPC free tiers cap `eth_getLogs` block ranges. If the deploy is many days old, the scan can fail and the record falls back to state-only events (`[core] events degraded`). Chunking is Phase 3.
+- **Unverified until the runner runs commands:**
+  - The TypeScript build. The most likely friction is the viem `getLogs({ strict: true })` arg typing in `lib/escrow-chain.ts`.
+  - `forge test`. `vm.expectEmit(bool,bool,bool,bool)` is declared in the local `Vm` interface without forge-std.
+  - `npm run seed`.
+
+## Next best step
+
+Phase 3:
+- Replace the status-only poll in `escrow-record.tsx` with `watchContractEvent` and a refetch of `/api/escrows/[id]`, so the timeline gains the real `Checked` and `Released` rows without a reload.
+- Add wallet connect and tx lifecycle UX, and the payee balance before and after.
+- Resolve escrow 2 on chain.
+
+## Env keys the runner must fill
+
+| Key | Read by | Source |
+| --- | --- | --- |
+| `PRIVATE_KEY` | `Deploy.s.sol`, `Smoke.s.sol` (`vm.envUint`) | the pre-funded `FARM_EVM_PRIVATE_KEY` wallet |
+| `RPC_URL` | forge `--rpc-url` | Alchemy or Infura Sepolia endpoint |
+| `CRE_FORWARDER` | `Deploy.s.sol` (`vm.envOr`) | `0x15fc6ae953e024d975e77382eeec56a9101f9f88`, the Sepolia MockKeystoneForwarder; check it against docs.chain.link/cre |
+| `DEPLOYED_CONTRACT` | `Smoke.s.sol` (`vm.envAddress`) | address printed by `Deploy.s.sol` |
+| `COURTLISTENER_API_TOKEN` | `lib/secrets.ts` | courtlistener.com/profile/api/ |
+| `SEPOLIA_RPC_URL` | `lib/secrets.ts` (server only) | Alchemy or Infura Sepolia endpoint, can equal `RPC_URL` |
+| `ESCROW_DEPLOY_BLOCK` | `lib/secrets.ts` | block number of the Deploy.s.sol tx on sepolia.etherscan.io |
+| `ADAPTER_MODE` | `lib/adapter.ts` | `real` after deploy; `fake` for rehearsal |
+| `NEXT_PUBLIC_CONTRACT_ADDRESS` | `lib/config.ts` | address printed by `Deploy.s.sol` |
+| `NEXT_PUBLIC_CHAIN_ID` | `lib/config.ts` | `11155111` |
+
+Every `vm.env*` name in `contracts/script/*.s.sol`: `PRIVATE_KEY` (Deploy, Smoke), `CRE_FORWARDER` (Deploy), `DEPLOYED_CONTRACT` (Smoke).
+
+After the deploy, also put the address in `cre/decreta-docket/config.staging.json` `escrowAddress`.
+
+---
+
 # Phase 1: walking skeleton (2026-10-20)
 
 ## Goal
